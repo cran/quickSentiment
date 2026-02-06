@@ -1,0 +1,88 @@
+---
+title: "Introduction to quickSentiment"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to quickSentiment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# --- 1. SETUP: LOAD LIBRARIES ---
+# -------------------------------------------------------------------
+```{r, include = FALSE}
+library(quickSentiment)
+
+```
+
+```{r setup}
+library(doParallel)
+# CRAN limits the number of cores used during package checks
+cores <- min(2, parallel::detectCores())
+registerDoParallel(cores = cores)
+```
+
+# --- 2. LOAD AND PREPARE TRAINING DATA ---
+```{r}
+# Look for the file in the installed package first
+csv_path <- system.file("extdata", "tweets.csv", package = "quickSentiment")
+
+# Fallback for when you are building the package locally
+if (csv_path == "") {
+  csv_path <- "../inst/extdata/tweets.csv"
+}
+tweets <- read.csv(csv_path)
+set.seed(123)
+```
+
+# --- 3. PREPROCESS THE TEXT ---
+# -------------------------------------------------------------------
+# Use the pre_process() function from our package to clean the raw text.
+# This step is done externally to the main pipeline, allowing you to reuse
+# the same cleaned text for multiple different models or analyses in the future.
+
+
+```{r}
+tweets$cleaned_text <- pre_process(tweets$Tweet)
+tweets$sentiment = ifelse(tweets$Avg>0,'P','N')
+```
+
+# --- 4. RUN THE MAIN TRAINING PIPELINE ---
+# -------------------------------------------------------------------
+# This is the core of the package. We call the main pipeline() function
+# to handle the train/test split, vectorization, model training, and evaluation.
+
+```{r}
+result <- pipeline(
+  # --- Define the vectorization method ---
+  # Options: "bow" (raw counts), "tf" (term frequency), "tfidf"
+  vect_method = "tf",
+  
+  # --- Define the model to train ---
+  # Options: "logit", "rf", "xgb"
+  model_name = "rf",
+  
+  # --- Specify the data and column names ---
+  df = tweets,
+  text_column_name = "cleaned_text",      # The column with our preprocessed text
+  sentiment_column_name = "sentiment",    # The column with the target variable
+  
+  # --- Set vectorization options ---
+  # Use n_gram = 2 for unigrams + bigrams, or 1 for just unigrams
+  n_gram = 1
+)
+```
+# ===================================================================
+# --- 5. PREDICTION ON NEW, UNSEEN DATA ---
+# ===================================================================
+# The training is complete. The 'result' object now contains our trained
+# model and all the necessary "artifacts" for prediction.
+```{r}
+
+tweets$sentimentPredict <- prediction(
+  pipeline_object = result,
+  df = tweets,
+  text_column = "cleaned_text"
+)
+
+```
+
