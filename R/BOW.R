@@ -1,9 +1,14 @@
 #BOW.R
 #' Train a Bag-of-Words Model
 #' @param doc A character vector of documents to be processed.
-#' @param weighting_scheme A string specifying the weighting to apply. Must be one
-#'   of \code{"bow"}, \code{"binary"}, \code{"tf"}, or \code{"tfidf"}.
-#'   Defaults to \code{"bow"}.
+#' @param weighting_scheme A string specifying the weighting to apply.
+#'   Defaults to \code{"bag_of_words"}.
+#'   \itemize{
+#'     \item \code{"bag_of_words"} (Alias: \code{"bow"}) - Standard count of words.
+#'     \item \code{"term_frequency"} (Alias: \code{"tf"}) - Normalized counts (frequency relative to document length).
+#'     \item \code{"tfidf"} (Alias: \code{"tf-idf"}) - Term Frequency-Inverse Document Frequency.
+#'     \item \code{"binary"} - Presence/Absence (1/0).
+#'   }
 #' @param ngram_size An integer specifying the maximum n-gram size. For example,
 #' `ngram_size = 1` will create unigrams only; `ngram_size = 2` will create unigrams and bigrams. Defaults to 1.
 #' @return An object of class \code{"qs_bow_fit"} containing:
@@ -12,7 +17,7 @@
 #'     \item \code{weighting_scheme}: the weighting used
 #'     \item \code{ngram_size}: the n-gram size used
 #'   }#'
-#' @importFrom quanteda tokens tokens_ngrams tokens_select dfm dfm_weight
+#' @importFrom quanteda tokens tokens_ngrams tokens_select dfm dfm_weight ndoc docfreq dfm_tfidf
 #' @importFrom magrittr %>%
 #' @importFrom stopwords stopwords
 #' @export
@@ -23,9 +28,18 @@
 #'
 BOW_train <- function(doc,weighting_scheme = "bow",ngram_size=1) {
   idf_vector <- NULL
+
   #check for proper inputs
-  if (!weighting_scheme %in% c("bow", "binary", "tf", "tfidf")) {
-    stop("`weighting_scheme` must be one of 'bow', 'binary', 'tf', or 'tfidf'.",
+  weighting_scheme <- tolower(trimws(weighting_scheme))
+  if (weighting_scheme == "bow") weighting_scheme <- "bag_of_words"
+  if (weighting_scheme == "tf")  weighting_scheme <- "term_frequency"
+  if (weighting_scheme == "tf-idf")  weighting_scheme <- "tfidf"
+
+  allowed <- c("bag_of_words", "binary", "term_frequency", "tfidf")
+
+  if (!weighting_scheme %in% allowed) {
+    stop(sprintf("Invalid weighting_scheme '%s'. Must be one of: %s",
+                 weighting_scheme, paste(allowed, collapse = ", ")),
          call. = FALSE)
   }
 
@@ -44,27 +58,24 @@ BOW_train <- function(doc,weighting_scheme = "bow",ngram_size=1) {
     quanteda::tokens_ngrams(n = 1:ngram_size) %>%
     quanteda::dfm()
 
-
-
-  # Weighting Logic
-  dfm_final <- switch(weighting_scheme,
-                      "binary" = quanteda::dfm_weight(dfm_raw, scheme = "boolean"),
-                      "tf"     = quanteda::dfm_weight(dfm_raw, scheme = "prop"),
-                      "tfidf"  = quanteda::dfm_tfidf(dfm_raw, scheme_tf = "prop", scheme_df = "inverse"),
-                      dfm_raw # default bow
-  )
-
   # Store IDF vector separately ONLY if using tfidf for manual matching in test
   # Note: quanteda's dfm_tfidf is preferred, but for BOW_test to apply training
   # weights to new data, we still need the training IDF values.
   idf_vals <- NULL
+
   if (weighting_scheme == "tfidf") {
     # Using the standard smoothed IDF formula as you had before
     N <- quanteda::ndoc(dfm_raw)
     df_counts <- quanteda::docfreq(dfm_raw)
     idf_vals <- log((N + 1) / (df_counts + 1)) + 1
   }
-
+  # Weighting Logic
+  dfm_final <- switch(weighting_scheme,
+                      "binary" = quanteda::dfm_weight(dfm_raw, scheme = "boolean"),
+                      "term_frequency"     = quanteda::dfm_weight(dfm_raw, scheme = "prop"),
+                      "tfidf"  = quanteda::dfm_tfidf(dfm_raw, scheme_tf = "prop", scheme_df = "inverse",base=exp(1)), #force natural log,
+                      dfm_raw # default bow
+  )
 
   #returns not just the dfm but also the weighting scheme and ngram size for future reference
 
@@ -72,7 +83,7 @@ BOW_train <- function(doc,weighting_scheme = "bow",ngram_size=1) {
     dfm_template = dfm_final,
     weighting_scheme = weighting_scheme,
     ngram_size = ngram_size,
-    idf_vector = if (weighting_scheme == "tfidf") idf_vector else NULL
+    idf_vector = if (weighting_scheme == "tfidf") idf_vals else NULL
   )
   class(fit) <- "qs_bow_fit"
   return(fit)
@@ -89,6 +100,7 @@ BOW_train <- function(doc,weighting_scheme = "bow",ngram_size=1) {
 #'
 #' @importFrom quanteda tokens tokens_ngrams tokens_select dfm dfm_match featnames dfm_weight
 #' @importFrom magrittr %>%
+#' @importFrom Matrix Diagonal
 #' @export
 #' @examples
 #' train_txt <- c("apple orange banana", "apple apple")
@@ -130,14 +142,14 @@ BOW_test <- function(doc, fit) {
   # 3. Apply the SAME weighting scheme
   dfm_final <- switch(fit$weighting_scheme,
                       "binary" = quanteda::dfm_weight(dfm_matched, scheme = "boolean"),
-                      "tf"     = quanteda::dfm_weight(dfm_matched, scheme = "prop"),
+                      "term_frequency"     = quanteda::dfm_weight(dfm_matched, scheme = "prop"),
                       "tfidf"  = {
                         # Use the specific IDF vector calculated during training
                         tf_test <- quanteda::dfm_weight(dfm_matched, scheme = "prop")
                         weighted_mat <- tf_test %*% Matrix::Diagonal(x = fit$idf_vector)
                         quanteda::as.dfm(weighted_mat)
                       },
-                      dfm_matched # Default for "bow" (raw counts)
+                      dfm_matched # Default for "bag of words" (raw counts)
   )
   return(dfm_final)
 }

@@ -9,9 +9,14 @@ BOW_train(doc, weighting_scheme = "bow", ngram_size = 1)
 \arguments{
 \item{doc}{A character vector of documents to be processed.}
 
-\item{weighting_scheme}{A string specifying the weighting to apply. Must be one
-of \code{"bow"}, \code{"binary"}, \code{"tf"}, or \code{"tfidf"}.
-Defaults to \code{"bow"}.}
+\item{weighting_scheme}{A string specifying the weighting to apply.
+Defaults to \code{"bag_of_words"}.
+\itemize{
+  \item \code{"bag_of_words"} (Alias: \code{"bow"}) - Standard count of words.
+  \item \code{"term_frequency"} (Alias: \code{"tf"}) - Normalized counts (frequency relative to document length).
+  \item \code{"tfidf"} (Alias: \code{"tf-idf"}) - Term Frequency-Inverse Document Frequency.
+  \item \code{"binary"} - Presence/Absence (1/0).
+}}
 
 \item{ngram_size}{An integer specifying the maximum n-gram size. For example,
 `ngram_size = 1` will create unigrams only; `ngram_size = 2` will create unigrams and bigrams. Defaults to 1.}

@@ -9,12 +9,13 @@
 #' @param test_vectorized The test feature matrix, which must have the same
 #'   features as `train_vectorized`.
 #' @param parallel Logical
+#' @param tune Logical
 #'
 #' @return A list containing two elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
 #'   \item{model}{The final, trained `xgb.Booster` model object.}
 #'
-#' @importFrom xgboost xgb.train xgb.DMatrix
+#' @importFrom xgboost xgb.train xgb.DMatrix xgb.cv
 #' @importFrom stats predict
 #'
 #' @export
@@ -23,11 +24,11 @@
 #' train_matrix <- matrix(runif(100), nrow = 10)
 #' test_matrix <- matrix(runif(50), nrow = 5)
 #' y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
-#'
 #' # Run model
 #' model_results <- xgb_model(train_matrix, y_train, test_matrix)
 #' print(model_results$pred)
-xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE) {
+
+xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tune = FALSE) {
 
   message("\n--- Training Multi-Class XGBoost Model ---\n")
 
@@ -42,6 +43,7 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE) {
   dtest <- xgb.DMatrix(data = test_vectorized)
 
   threads <- if (isTRUE(parallel)) parallel::detectCores() - 1 else 1
+
   # --- CHANGE 2: Update the parameters ---
   params <- list(
     objective = "multi:softprob",
@@ -52,11 +54,31 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE) {
     nthread = threads
   )
 
+  # --- CONDITIONAL TUNING LOGIC ---
+  if (isTRUE(tune)) {
+    message("  - Using xgb.cv to find optimal nrounds (early stopping)...")
+
+    cv_results <- xgboost::xgb.cv(
+      params = params,
+      data = dtrain,
+      nfold = 5,
+      nrounds = 500,
+      early_stopping_rounds = 20,
+      verbose = 0
+    )
+
+    best_nrounds <- cv_results$best_iteration
+
+  } else {
+    # Fast route: Use your original default
+    best_nrounds <- 100
+  }
+
   # Train the model (this part is the same)
   xgb_model <- xgb.train(
     params = params,
     data = dtrain,
-    nrounds = 100,
+    nrounds = best_nrounds,
     verbose = 0
   )
 

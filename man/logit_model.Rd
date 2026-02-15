@@ -4,7 +4,13 @@
 \alias{logit_model}
 \title{Train a Regularized Logistic Regression Model using glmnet}
 \usage{
-logit_model(train_vectorized, Y, test_vectorized, parallel = FALSE)
+logit_model(
+  train_vectorized,
+  Y,
+  test_vectorized,
+  parallel = FALSE,
+  tune = FALSE
+)
 }
 \arguments{
 \item{train_vectorized}{The training feature matrix (e.g., a `dfm` from quanteda).
@@ -17,6 +23,8 @@ classification.}
 features as `train_vectorized`.}
 
 \item{parallel}{Logical}
+
+\item{tune}{Logical}
 }
 \value{
 A list containing two elements:

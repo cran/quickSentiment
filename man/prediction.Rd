@@ -24,7 +24,9 @@ and ensures consistent preprocessing and vectorization for new, unseen text.
 }
 \examples{
 \donttest{
+if (exists("my_artifacts")) {
 preds <- prediction(my_artifacts, c("cleaned text one", "cleaned text two"))
+ }
 }
 
 }

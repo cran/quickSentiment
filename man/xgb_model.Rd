@@ -4,7 +4,7 @@
 \alias{xgb_model}
 \title{Train a Gradient Boosting Model using XGBoost}
 \usage{
-xgb_model(train_vectorized, Y, test_vectorized, parallel = FALSE)
+xgb_model(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE)
 }
 \arguments{
 \item{train_vectorized}{The training feature matrix (e.g., a `dfm` from quanteda).}
@@ -15,6 +15,8 @@ xgb_model(train_vectorized, Y, test_vectorized, parallel = FALSE)
 features as `train_vectorized`.}
 
 \item{parallel}{Logical}
+
+\item{tune}{Logical}
 }
 \value{
 A list containing two elements:
@@ -31,7 +33,6 @@ It automatically handles both binary and multi-class classification problems.
 train_matrix <- matrix(runif(100), nrow = 10)
 test_matrix <- matrix(runif(50), nrow = 5)
 y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
-
 # Run model
 model_results <- xgb_model(train_matrix, y_train, test_matrix)
 print(model_results$pred)

@@ -5,7 +5,7 @@
 \title{functions/random_forest_fast.R
 Train a Random Forest Model using Ranger}
 \usage{
-rf_model(train_vectorized, Y, test_vectorized, parallel = FALSE)
+rf_model(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE)
 }
 \arguments{
 \item{train_vectorized}{The training feature matrix (e.g., a `dfm` from quanteda).}
@@ -16,6 +16,8 @@ rf_model(train_vectorized, Y, test_vectorized, parallel = FALSE)
 features as `train_vectorized`.}
 
 \item{parallel}{Logical}
+
+\item{tune}{Logical}
 }
 \value{
 A list containing two elements:

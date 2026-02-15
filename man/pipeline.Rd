@@ -11,16 +11,28 @@ pipeline(
   text_column_name,
   sentiment_column_name,
   n_gram = 1,
+  tune = FALSE,
   parallel = FALSE,
   stratify = TRUE
 )
 }
 \arguments{
 \item{vect_method}{A string specifying the vectorization method.
-Must be one of \code{"bow"}, \code{"binary"}, \code{"tf"}, or \code{"tfidf"}.}
+Defaults to \code{"bag_of_words"}.
+\itemize{
+  \item \code{"bag_of_words"} (Alias: \code{"bow"}) - Standard count of words.
+  \item \code{"term_frequency"} (Alias: \code{"tf"}) - Normalized counts.
+  \item \code{"tfidf"} (Alias: \code{"tf-idf"}) - Term Frequency-Inverse Document Frequency.
+  \item \code{"binary"} - Presence/Absence (1/0).
+}}
 
 \item{model_name}{A string specifying the model to train.
-Must be one of \code{"logit"}, \code{"rf"}, or \code{"xgb"}.}
+Defaults to \code{"logistic_regression"}.
+\itemize{
+  \item \code{"random_forest"} (Alias: \code{"rf"})
+  \item \code{"xgboost"} (Alias: \code{"xgb"})
+  \item \code{"logistic_regression"} (Alias: \code{"logit"}, \code{"glm"})
+}}
 
 \item{df}{The input data frame.}
 
@@ -29,6 +41,9 @@ Must be one of \code{"logit"}, \code{"rf"}, or \code{"xgb"}.}
 \item{sentiment_column_name}{The name of the column containing the original target labels (e.g., ratings).}
 
 \item{n_gram}{The n-gram size to use for BoW/TF-IDF. Defaults to 1.}
+
+\item{tune}{Logical. If TRUE, the pipeline will perform hyperparameter tuning 
+for the selected model. Defaults to FALSE. [NEW]}
 
 \item{parallel}{If TRUE, runs model training in parallel. Default FALSE.}
 
@@ -49,9 +64,9 @@ df <- data.frame(
            "not good", "very bad", "fantastic", "wonderful"),
   y = c("P", "P", "P", "P", "N", "N", "N", "N", "N", "N", "P", "P")
 )
-# Note: We use a small dataset here for demonstration.
-# In real use cases, ensure you have more observations per class.
-out <- pipeline("bow", "logit", df, "text", "y")
 
+
+out1 <- pipeline("bow", "logistic_regression", df, "text", "y")
+out2 <- pipeline("tfidf", "rf", df, "text", "y") # 'rf' automatically converts to 'random_forest'
 
 }

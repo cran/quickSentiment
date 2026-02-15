@@ -11,6 +11,7 @@
 #' @param test_vectorized The test feature matrix, which must have the same
 #'   features as `train_vectorized`.
 #' @param parallel Logical
+#' @param tune Logical
 #'
 #' @return A list containing two elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
@@ -31,28 +32,44 @@
 #' model_results <- logit_model(train_matrix, y_train, test_matrix)
 #' print(model_results$pred)
 #'
-logit_model <- function(train_vectorized, Y, test_vectorized, parallel=FALSE){
+logit_model <- function(train_vectorized, Y, test_vectorized, parallel=FALSE, tune = FALSE){
   message("\n--- Running Logistic Regression (logit) Function ---\n")
+  if (isTRUE(tune)) {
+    message("--- Tuning Elastic Net (alpha and lambda) ---\n")
+    # Use caret for a grid search over alpha (Lasso/Ridge mix)
+    tune_grid <- expand.grid(alpha = seq(0, 1, by = 0.2),
+                             lambda = seq(0.001, 0.1, length.out = 10))
+    # caret handles the cross-validation across the alpha grid
+    trained_obj <- caret::train(x = train_vectorized, y = Y, method = "glmnet",
+                          trControl = caret::trainControl(method = "cv", number = 5),
+                          tuneGrid = tune_grid)
 
+    # Extract the actual glmnet model and the best lambda
+    final_fit <- trained_obj$finalModel
+    best_s    <- trained_obj$bestTune$lambda
+
+  } else {
 
   message("1. Training the glmnet model with 5-fold cross-validation...\n")
-  cv_model <- cv.glmnet(
+  final_fit <- cv.glmnet(
     x = train_vectorized,
     y = Y ,
-    family = "multinomial", # This specifies logistic regression
-    alpha = 1,           # This specifies Lasso regularization (great for text)
-    nfolds = 5,          # Number of cross-validation folds
-    parallel = parallel     # Tell glmnet to use the parallel core
+    family = "multinomial",
+    alpha = 1,           #  Lasso regularization
+    nfolds = 5,
+    parallel = parallel
   )
-  message("   - CV complete. Best lambda (lambda.min) found:", round(cv_model$lambda.min, 6), "\n")
+  best_s <- "lambda.min"
+  }
 
-  y_pred <- predict(cv_model,
+   y_pred <- predict(final_fit,
                     newx = test_vectorized,
-                    s = "lambda.min",
+                    s = best_s,
                     type = "class")
+
   results <- list(
     pred = y_pred,
-    model = cv_model
+    model = final_fit
   )
   message("--- Logit function complete. Returning results. ---\n")
   return(results)

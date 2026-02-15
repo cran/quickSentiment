@@ -10,6 +10,8 @@
 #' @param test_vectorized The test feature matrix, which must have the same
 #'   features as `train_vectorized`.
 #' @param parallel Logical
+#' @param tune Logical
+#'
 #'
 #' @return A list containing two elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
@@ -29,47 +31,64 @@
 #' model_results <- rf_model(train_matrix, y_train, test_matrix)
 #' print(model_results$pred)
 #'
-rf_model <- function(train_vectorized, Y, test_vectorized,parallel = FALSE) {
+rf_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE) {
 
-  message("\n--- Training Random Forest Model (with ranger) ---\n")
+  message("\n--- Training Random Forest Model (ranger) ---\n")
 
-  # --- Convert sparse DFM to a dense matrix ---
-  X_train_matrix <- as.matrix(train_vectorized)
-  X_test_matrix <- as.matrix(test_vectorized)
-
+  p <- ncol(train_vectorized)
   threads <- if (isTRUE(parallel)) parallel::detectCores() - 1 else 1
 
-  # --- Train the model ---
-  train_df_for_ranger <- data.frame(Y, X_train_matrix, check.names = TRUE) # Being explicit
+  # Random Forest requires a dense matrix or a specific data frame format
+  X_train_matrix <- as.matrix(train_vectorized)
+  X_test_matrix <- as.matrix(test_vectorized)
+  train_df <- data.frame(Y = Y, X_train_matrix, check.names = FALSE)
 
-  ranger_model <- ranger(
-    dependent.variable.name = "Y",
-    data = train_df_for_ranger,
-    num.trees = 100,
-    num.threads = threads, # Control parallelism here
-    verbose = FALSE
-  )
+  if (isTRUE(tune)) {
+    message("  - Tuning mtry using 5-fold cross-validation (this may take time)...")
 
+    # Define a grid for mtry.
+    # We test: sqrt(p), 2*sqrt(p), and p/3
+    tune_grid <- expand.grid(
+      mtry = unique(floor(c(sqrt(p), sqrt(p) * 2, p / 3))),
+      splitrule = "gini",
+      min.node.size = c(1, 5)
+    )
 
-  # 1. Get the exact predictor names the model was trained on.
-  #    These are the "cleaned" names.
-  training_colnames <- ranger_model$forest$independent.variable.names
+    # We use caret here because ranger doesn't have a built-in cv function
+    trained_obj <- caret::train(
+      Y ~ .,
+      data = train_df,
+      method = "ranger",
+      trControl = caret::trainControl(method = "cv", number = 5, allowParallel = parallel),
+      tuneGrid = tune_grid,
+      num.trees = 500
+    )
 
-  # 2. Force the test matrix to have those exact names.
-  #    Our dfm_match() step already ensured the number and order of columns are the same.
-  colnames(X_test_matrix) <- training_colnames
+    ranger_model <- trained_obj$finalModel
+    message("    - Best mtry found: ", ranger_model$mtry)
 
-  # --- Make predictions ---
+  } else {
+    # Fast Heuristic Route
+    message("  - Using heuristic mtry and 500 trees...")
+    actual_mtry <- min(p, floor(sqrt(p) * 2))
+
+    ranger_model <- ranger::ranger(
+      dependent.variable.name = "Y",
+      data = train_df,
+      num.trees = 500,
+      mtry = actual_mtry,
+      num.threads = threads,
+      importance = "impurity",
+      verbose = FALSE
+    )
+  }
+
+  # Ensure test column names match training "clean" names
+  colnames(X_test_matrix) <- ranger_model$forest$independent.variable.names
   predictions_obj <- predict(ranger_model, data = X_test_matrix)
-  y_pred <- predictions_obj$predictions
 
-  # --- ENFORCE THE CONTRACT ---
-  results <- list(
-    pred = y_pred,
+  return(list(
+    pred = predictions_obj$predictions,
     model = ranger_model
-  )
-
-  message("Ranger training complete.\n")
-
-  return(results)
+  ))
 }

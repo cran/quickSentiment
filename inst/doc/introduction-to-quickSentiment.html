@@ -48,9 +48,8 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
-html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -61,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -418,14 +417,14 @@ evaluation.</h1>
 <span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  <span class="co"># Use n_gram = 2 for unigrams + bigrams, or 1 for just unigrams</span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>  <span class="at">n_gram =</span> <span class="dv">1</span></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>)</span></code></pre></div>
-<pre><code>## --- Running Pipeline: TF + RF ---</code></pre>
+<pre><code>## --- Running Pipeline: TERM_FREQUENCY + RANDOM_FOREST ---</code></pre>
 <pre><code>## Data split: 946 training rows, 235 test rows.</code></pre>
-<pre><code>## Vectorizing with TF (ngram=1)...</code></pre>
-<pre><code>##   - Fitting BoW model (tf) on training data...</code></pre>
-<pre><code>##   - Applying BoW transformation (tf) to new data...</code></pre>
+<pre><code>## Vectorizing with TERM_FREQUENCY (ngram=1)...</code></pre>
+<pre><code>##   - Fitting BoW model (term_frequency) on training data...</code></pre>
+<pre><code>##   - Applying BoW transformation (term_frequency) to new data...</code></pre>
 <pre><code>## 
-## --- Training Random Forest Model (with ranger) ---</code></pre>
-<pre><code>## Ranger training complete.</code></pre>
+## --- Training Random Forest Model (ranger) ---</code></pre>
+<pre><code>##   - Using heuristic mtry and 500 trees...</code></pre>
 </div>
 <div id="section-3" class="section level1">
 <h1>===================================================================</h1>
@@ -448,9 +447,9 @@ trained</h1>
 <span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">text_column =</span> <span class="st">&quot;cleaned_text&quot;</span></span>
 <span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>)</span></code></pre></div>
 <pre><code>## --- Preparing new data for prediction ---</code></pre>
-<pre><code>##   - Applying BoW transformation (tf) to new data...</code></pre>
+<pre><code>##   - Applying BoW transformation (term_frequency) to new data...</code></pre>
 <pre><code>## --- Making Predictions ---</code></pre>
-<pre><code>##   - Detected a ranger model. Using predict.train().</code></pre>
+<pre><code>##   - Detected a ranger model. Predicting...</code></pre>
 <pre><code>## Step 4: Correcting column names for ranger model...</code></pre>
 <pre><code>## --- Predictions Complete ---</code></pre>
 </div>

@@ -4,16 +4,28 @@
 #' data splitting, vectorization, model training, and evaluation.
 #'
 #' @param vect_method A string specifying the vectorization method.
-#'   Must be one of \code{"bow"}, \code{"binary"}, \code{"tf"}, or \code{"tfidf"}.
+#'   Defaults to \code{"bag_of_words"}.
+#'   \itemize{
+#'     \item \code{"bag_of_words"} (Alias: \code{"bow"}) - Standard count of words.
+#'     \item \code{"term_frequency"} (Alias: \code{"tf"}) - Normalized counts.
+#'     \item \code{"tfidf"} (Alias: \code{"tf-idf"}) - Term Frequency-Inverse Document Frequency.
+#'     \item \code{"binary"} - Presence/Absence (1/0).
+#'   }
 #' @param model_name A string specifying the model to train.
-#'   Must be one of \code{"logit"}, \code{"rf"}, or \code{"xgb"}.
+#'   Defaults to \code{"logistic_regression"}.
+#'   \itemize{
+#'     \item \code{"random_forest"} (Alias: \code{"rf"})
+#'     \item \code{"xgboost"} (Alias: \code{"xgb"})
+#'     \item \code{"logistic_regression"} (Alias: \code{"logit"}, \code{"glm"})
+#'   }
 #' @param df The input data frame.
 #' @param text_column_name The name of the column containing the **preprocessed** text.
 #' @param sentiment_column_name The name of the column containing the original target labels (e.g., ratings).
 #' @param n_gram The n-gram size to use for BoW/TF-IDF. Defaults to 1.
 #' @param stratify If TRUE, use stratified split by sentiment. Default TRUE.
 #' @param parallel If TRUE, runs model training in parallel. Default FALSE.
-#'
+#' @param tune Logical. If TRUE, the pipeline will perform hyperparameter tuning 
+#'    for the selected model. Defaults to FALSE. [NEW]
 #' @return A list containing the trained model object, the DFM template,
 #'   class levels, and a comprehensive evaluation report.
 #' @importFrom caret createDataPartition confusionMatrix
@@ -28,10 +40,10 @@
 #'            "not good", "very bad", "fantastic", "wonderful"),
 #'   y = c("P", "P", "P", "P", "N", "N", "N", "N", "N", "N", "P", "P")
 #' )
-#' # Note: We use a small dataset here for demonstration.
-#' # In real use cases, ensure you have more observations per class.
-#' out <- pipeline("bow", "logit", df, "text", "y")
 #'
+#'
+#' out1 <- pipeline("bow", "logistic_regression", df, "text", "y")
+#' out2 <- pipeline("tfidf", "rf", df, "text", "y") # 'rf' automatically converts to 'random_forest'
 #'
 pipeline <- function(vect_method,
   model_name,
@@ -39,25 +51,51 @@ pipeline <- function(vect_method,
   text_column_name,
   sentiment_column_name,
   n_gram = 1,
+  tune = FALSE,
   parallel=FALSE,
   stratify = TRUE) {
 
     stopf <- function(...) stop(sprintf(...), call. = FALSE)
+
+    # --- 1. CLEAN & TRANSLATE ARGUMENTS ---
+    #to lower and trim ensures small typos don't break the function and allows for more flexible input
     vect_method <- tolower(trimws(vect_method))
     model_name  <- tolower(trimws(model_name))
     n_gram <- as.integer(n_gram)
 
-  #Ensure Vector method is in Input
-    if (!vect_method %in% c("bow", "binary", "tf", "tfidf")) {
-      stopf("Vectorizer '%s' is not supported. Use: bow, binary, tf, tfidf.", vect_method)
+    # ALIASING: VECTORIZERS
+    if (vect_method == "bow") vect_method <- "bag_of_words"
+    if (vect_method == "tf")  vect_method <- "term_frequency"
+    if (vect_method == "tf-idf")  vect_method <- "tfidf"
+
+    # ALIASING: Convert shortcuts to official names
+    if (model_name == "rf")    model_name <- "random_forest"
+    if (model_name == "xgb")   model_name <- "xgboost"
+    if (model_name == "nb")   model_name <- "naive_bayes"
+    if (model_name %in% c("logit","glm","logistic")) model_name <- "logistic_regression"
+
+
+  # Ensure Vector method is in Input
+    allowed_vect <- c("bag_of_words", "binary", "term_frequency", "tfidf")
+    if (!vect_method %in% allowed_vect) {
+      stopf("Vectorizer '%s' is not supported. Use: %s.",
+            vect_method, paste(allowed_vect, collapse = ", "))
     }
 
-  #Ensure Model name is in Input
-  models_list <- list(logit = logit_model, rf = rf_model, xgb = xgb_model)
-    if (!model_name %in% names(models_list)) {
+  # Ensure Model name is in Input
+    allowed_models <- c("logistic_regression", "random_forest", "xgboost")
+    if (!model_name %in% allowed_models) {
       stopf("Model '%s' is not supported. Use: %s.",
-            model_name, paste(names(models_list), collapse = ", "))
+            model_name, paste(allowed_models, collapse = ", "))
     }
+
+  # Model list that can be used
+    models_list <- list(
+      logistic_regression = logit_model,
+      random_forest       = rf_model,
+      xgboost             = xgb_model,
+      naive_bayes         = nb_model
+    )
 
 
   if (!is.data.frame(df)) stopf("`df` must be a data.frame.")
@@ -130,7 +168,13 @@ pipeline <- function(vect_method,
 
   # --- 4. MODEL TRAINING & PREDICTION ---
 
-  model_results <- models_list[[model_name]](X_train, y_train, X_test, parallel = parallel)
+  model_results <- models_list[[model_name]](
+    X_train,
+    y_train,
+    X_test,
+    parallel = parallel,
+    tune=tune
+    )
   if (is.null(model_results$model) || is.null(model_results$pred)) {
     stopf("Model function '%s' must return a list with elements `model` and `pred`.", model_name)
   }
