@@ -6,11 +6,11 @@
 #' @param pipeline_object A list object returned by the main `pipeline()` function.
 #'   It must contain the trained model, DFM template, preprocessing function,
 #'   and n-gram settings.
-#' @param df A data frame containing the new data.
 #' @param text_column A string specifying the column name of the text to predict.
+#' @param threshold Numeric. Optional custom threshold for binary classification.
+#'   If NULL, uses the optimized threshold from training (if available).
 #'
-#'
-#' @return A vector of class predictions for the new data.
+#' @return A data frame containing the `predicted_class` and probability columns.
 #'
 #' @importFrom stats predict
 #' @importFrom xgboost xgb.DMatrix
@@ -19,13 +19,14 @@
 #' @examples
 #' \donttest{
 #' if (exists("my_artifacts")) {
-#' preds <- prediction(my_artifacts, c("cleaned text one", "cleaned text two"))
+#'   dummy_df <- data.frame(text = c("loved it", "hated it"), stringsAsFactors = FALSE)
+#'   preds <- predict_sentiment(my_artifacts, df = dummy_df, text_column = "text")
 #'  }
 #' }
 #'
-prediction <- function(pipeline_object,
-                       df,
-                       text_column) {
+predict_sentiment <- function(pipeline_object,
+                       text_column,
+                       threshold = NULL) {
 
   # --- 1. Extract the necessary artifacts from the pipeline object ---
   final_model <- pipeline_object$trained_model
@@ -36,73 +37,42 @@ prediction <- function(pipeline_object,
   message("--- Preparing new data for prediction ---\n")
 
   new_dfm <- BOW_test(
-    df[[text_column]],
+    text_column,
     dfm_template)
+
+  # Set Up Threshold
+  if (is.null(threshold)) {
+    # No user value. Do we have a "Smart" value from training?
+    if (!is.null(pipeline_object$guidance$best_threshold)) {
+      threshold <- pipeline_object$guidance$best_threshold
+      message(sprintf("Using optimized threshold: %.3f", threshold))
+    }
+    # 3. Fallback
+    else {
+      threshold <- 0.5
+    }
+  }
 
   # --- 3. Conditional Prediction based on Model Class ---
   message("--- Making Predictions ---\n")
 
-  # Initialize a variable to hold the final predictions
-  final_predictions <- NULL
+  results <- route_prediction(
+    new_data_vectorized = new_dfm,
+    qs_artifact = pipeline_object,
+    model_type = pipeline_object$model_type,
+    Y_levels = class_levels,
+    threshold = threshold
+  )
+  #--- 4.  Output
+  final_output <- data.frame(predicted_class = results$pred)
 
-  # Check the class of the model object
-  # Logistic Model
-  if (inherits(final_model, "cv.glmnet") || inherits(final_model, "glmnet")) {
-    s_val <- if (inherits(final_model, "cv.glmnet")) "lambda.min" else pipeline_object$best_lambda
-    message("  - Detected a (cv)glmnet model. Predicting...\n")
-    final_predictions <- stats::predict(final_model,
-                                 newx = new_dfm,
-                                 s = s_val,
-                                 type = "class")
-    # glmnet returns a matrix, so we extract the first column
-    final_predictions <- final_predictions[, 1]
-  # Naive Bayesian    
-  } else if (inherits(final_model, "multinomial_naive_bayes")) {
-    
-    message("  - Detected a Naive Bayes model. Predicting...\n")
-    final_predictions <- stats::predict(final_model, newdata = new_dfm)
-  
-  # Random Forest
-  } else if (inherits(final_model, "ranger")) {
+  prob_df <- as.data.frame(results$probs)
+  colnames(prob_df) <- paste0("prob_", colnames(prob_df))
 
-    message("  - Detected a ranger model. Predicting...\n")
-    # Models like ranger/randomForest need a dense matrix
-    new_dense_matrix <- as.matrix(new_dfm)
+  # Bind the probabilities to the class predictions
+  final_output <- cbind(final_output, prob_df)
 
-    message("Step 4: Correcting column names for ranger model...\n")
-    model_colnames <- final_model$forest$independent.variable.names
-    colnames(new_dense_matrix) <- model_colnames
+  message("--- Prediction Complete ---\n")
+  return(final_output)
 
-    prediction_obj <- stats::predict(final_model, data = new_dense_matrix)
-    final_predictions <- prediction_obj$predictions
-
-
-  } else if (inherits(final_model, "xgb.Booster")) {
-    message("  - Detected an xgboost model. Predicting...\n")
-    # 1. Convert the new DFM into the required xgb.DMatrix format
-    new_dmatrix <- xgb.DMatrix(data = new_dfm)
-
-    # 2. Predict probabilities. reshape=TRUE creates a matrix for multi-class.
-    pred_probabilities <- stats::predict(final_model, newdata = new_dmatrix, reshape = TRUE)
-
-    # 3. Convert probabilities to final class labels
-    if (is.vector(pred_probabilities)) { # Binary case
-      # If the output is a single vector of probabilities for the positive class
-      pred_numeric <- ifelse(pred_probabilities > 0.5, 1, 0)
-    } else { # Multi-class case
-      # If the output is a matrix, find the column with the highest probability for each row
-      pred_numeric <- max.col(pred_probabilities) - 1 # Get 0-indexed class number
-    }
-
-    # 4. Convert numeric class (0, 1, 2...) back to the original factor levels
-    final_predictions <- factor(pred_numeric,
-                                levels = 0:(length(class_levels) - 1),
-                                labels = class_levels)
-  } else {
-    stop(paste("Unsupported model type:", class(final_model)[1]))
-  }
-
-  message("--- Predictions Complete ---\n")
-  return(final_predictions)
 }
-

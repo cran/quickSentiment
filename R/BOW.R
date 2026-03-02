@@ -53,8 +53,7 @@ BOW_train <- function(doc,weighting_scheme = "bow",ngram_size=1) {
 
   # Create the DFM
   dfm_raw <- doc %>%
-    quanteda::tokens(remove_punct = TRUE, remove_numbers = TRUE) %>%
-    quanteda::tokens_select(pattern = stopwords::stopwords("en"), selection = "remove") %>%
+    quanteda::tokens() %>%
     quanteda::tokens_ngrams(n = 1:ngram_size) %>%
     quanteda::dfm()
 
@@ -131,8 +130,7 @@ BOW_test <- function(doc, fit) {
 
   # Create a raw DFM and match its features to the training template
   dfm_raw <- doc %>%
-    quanteda::tokens(remove_punct = TRUE, remove_numbers = TRUE) %>%
-    quanteda::tokens_select(pattern = stopwords::stopwords("en"), selection = "remove") %>%
+    quanteda::tokens() %>%
     quanteda::tokens_ngrams(n = 1:ngram_size)%>%
     quanteda::dfm()
 

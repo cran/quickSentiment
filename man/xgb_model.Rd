@@ -19,9 +19,11 @@ features as `train_vectorized`.}
 \item{tune}{Logical}
 }
 \value{
-A list containing two elements:
+A list containing four elements:
   \item{pred}{A vector of class predictions for the test set.}
+  \item{probs}{A matrix of predicted probabilities.}
   \item{model}{The final, trained `xgb.Booster` model object.}
+  \item{best_lambda}{Placeholder (NULL) for pipeline consistency.}
 }
 \description{
 This function trains a model using the xgboost package. It is highly
@@ -29,11 +31,18 @@ efficient and natively supports sparse matrices, making it ideal for text data.
 It automatically handles both binary and multi-class classification problems.
 }
 \examples{
-# Create dummy vectorized data
-train_matrix <- matrix(runif(100), nrow = 10)
-test_matrix <- matrix(runif(50), nrow = 5)
+\dontrun{
+# Create dummy vectorized training and test data
+train_matrix <- matrix(runif(100), nrow = 10, ncol = 10)
+test_matrix <- matrix(runif(50), nrow = 5, ncol = 10)
+
+# Provide column names (vocabulary) required by xgboost
+colnames(train_matrix) <- paste0("word", 1:10)
+colnames(test_matrix) <- paste0("word", 1:10)
+
 y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
-# Run model
+
+# Run xgboost model
 model_results <- xgb_model(train_matrix, y_train, test_matrix)
-print(model_results$pred)
+}
 }

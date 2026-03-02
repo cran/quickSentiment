@@ -11,26 +11,36 @@
 #' @param parallel Logical
 #' @param tune Logical
 #'
-#' @return A list containing two elements:
+#' @return A list containing four elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
+#'   \item{probs}{A matrix of predicted probabilities.}
 #'   \item{model}{The final, trained `xgb.Booster` model object.}
+#'   \item{best_lambda}{Placeholder (NULL) for pipeline consistency.}
 #'
 #' @importFrom xgboost xgb.train xgb.DMatrix xgb.cv
 #' @importFrom stats predict
+#' @importFrom methods as
 #'
 #' @export
 #' @examples
-#' # Create dummy vectorized data
-#' train_matrix <- matrix(runif(100), nrow = 10)
-#' test_matrix <- matrix(runif(50), nrow = 5)
+#' \dontrun{
+#' # Create dummy vectorized training and test data
+#' train_matrix <- matrix(runif(100), nrow = 10, ncol = 10)
+#' test_matrix <- matrix(runif(50), nrow = 5, ncol = 10)
+#'
+#' # Provide column names (vocabulary) required by xgboost
+#' colnames(train_matrix) <- paste0("word", 1:10)
+#' colnames(test_matrix) <- paste0("word", 1:10)
+#'
 #' y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
-#' # Run model
+#'
+#' # Run xgboost model
 #' model_results <- xgb_model(train_matrix, y_train, test_matrix)
-#' print(model_results$pred)
+#' }
 
 xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tune = FALSE) {
 
-  message("\n--- Training Multi-Class XGBoost Model ---\n")
+  message("\n--- Training XGBoost Model ---\n")
 
   # --- CHANGE 1: Prepare the Y variable ---
   # Get the number of classes from the factor levels
@@ -38,21 +48,36 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tun
   # Convert factor Y ('neg', 'neu', 'pos') to numeric ('1','2','3') and then to zero-indexed ('0','1','2')
   y_train_numeric <- as.numeric(Y) - 1
 
-  # Prepare DMatrix objects (this part is the same)
-  dtrain <- xgb.DMatrix(data = train_vectorized, label = y_train_numeric)
-  dtest <- xgb.DMatrix(data = test_vectorized)
-
+  # Setup parallel threads
   threads <- if (isTRUE(parallel)) parallel::detectCores() - 1 else 1
 
-  # --- CHANGE 2: Update the parameters ---
-  params <- list(
-    objective = "multi:softprob",
-    eval_metric = "mlogloss",
-    num_class = num_classes,
-    eta = 0.1,
-    max_depth = 4,
-    nthread = threads
-  )
+  # --- MEMORY SAFETY: Cast quanteda DFM to dgCMatrix ---
+  X_train_sparse <- methods::as(train_vectorized, "dgCMatrix")
+  X_test_sparse <- methods::as(test_vectorized, "dgCMatrix")
+
+  # This switch ensures Binary models allow Thresholds, while Multi-class works normally.
+  if (num_classes == 2) {
+    params <- list(
+      objective = "binary:logistic",
+      eval_metric = "logloss",
+      eta = 0.1,
+      max_depth = 4,
+      nthread = threads
+    )
+  } else {
+    params <- list(
+      objective = "multi:softprob",
+      eval_metric = "mlogloss",
+      num_class = num_classes,
+      eta = 0.1,
+      max_depth = 4,
+      nthread = threads
+    )
+  }
+
+  # Prepare DMatrix objects (this part is the same)
+  dtrain <- xgboost::xgb.DMatrix(data = X_train_sparse, label = y_train_numeric)
+  dtest <- xgboost::xgb.DMatrix(data = X_test_sparse)
 
   # --- CONDITIONAL TUNING LOGIC ---
   if (isTRUE(tune)) {
@@ -75,7 +100,7 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tun
   }
 
   # Train the model (this part is the same)
-  xgb_model <- xgb.train(
+  xgb_model <- xgboost::xgb.train(
     params = params,
     data = dtrain,
     nrounds = best_nrounds,
@@ -84,18 +109,35 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tun
 
   # --- CHANGE 3: Process the predictions ---
   # predict() now returns a matrix of probabilities (rows=samples, cols=classes)
+
   y_pred_prob_matrix <- predict(xgb_model, newdata = dtest, reshape = TRUE)
 
-  # Find the class with the highest probability for each row
-  y_pred_numeric <- max.col(y_pred_prob_matrix) - 1 # max.col is 1-indexed, so subtract 1
+  if (num_classes == 2) {
+    # Binary: Output is vector of probs for Class 1
+    # Use default 0.5 threshold for the internal evaluation report
+    prob_v <- as.vector(y_pred_prob_matrix)
+    y_probs <- matrix(c(1 - prob_v, prob_v), ncol = 2)
+    colnames(y_probs) <- levels(Y)
+
+    y_pred_numeric <- ifelse(prob_v > 0.5, 1, 0)
+
+    } else {
+    # Multi-class: Output is Matrix
+      y_probs <- y_pred_prob_matrix
+      colnames(y_probs) <- levels(Y)
+      y_pred_numeric <- max.col(y_probs) - 1
+  }
+
 
   # Map the numeric predictions back to the original factor labels for evaluation
   y_pred_factor <- factor(y_pred_numeric, levels = 0:(num_classes-1), labels = levels(Y))
-
+ 
   # --- ENFORCE THE CONTRACT (this part is the same) ---
   results <- list(
     pred = y_pred_factor,
-    model = xgb_model
+    probs = y_probs,
+    model = xgb_model,
+    best_lambda = NULL
   )
 
   return(results)

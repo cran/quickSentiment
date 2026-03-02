@@ -18,20 +18,18 @@
 #'     \item \code{"xgboost"} (Alias: \code{"xgb"})
 #'     \item \code{"logistic_regression"} (Alias: \code{"logit"}, \code{"glm"})
 #'   }
-#' @param df The input data frame.
-#' @param text_column_name The name of the column containing the **preprocessed** text.
-#' @param sentiment_column_name The name of the column containing the original target labels (e.g., ratings).
+#' @param text_vector A character vector containing the **preprocessed** text.
+#' @param sentiment_vector A vector or factor containing the target labels (e.g., ratings).
 #' @param n_gram The n-gram size to use for BoW/TF-IDF. Defaults to 1.
-#' @param stratify If TRUE, use stratified split by sentiment. Default TRUE.
 #' @param parallel If TRUE, runs model training in parallel. Default FALSE.
-#' @param tune Logical. If TRUE, the pipeline will perform hyperparameter tuning 
+#' @param tune Logical. If TRUE, the pipeline will perform hyperparameter tuning
 #'    for the selected model. Defaults to FALSE. [NEW]
 #' @return A list containing the trained model object, the DFM template,
 #'   class levels, and a comprehensive evaluation report.
-#' @importFrom caret createDataPartition confusionMatrix
 #' @importFrom parallel detectCores makeCluster stopCluster
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach registerDoSEQ
+#' @importFrom pROC roc auc coords
 #' @export
 #' @examples
 #' df <- data.frame(
@@ -42,18 +40,15 @@
 #' )
 #'
 #'
-#' out1 <- pipeline("bow", "logistic_regression", df, "text", "y")
-#' out2 <- pipeline("tfidf", "rf", df, "text", "y") # 'rf' automatically converts to 'random_forest'
+#' out <- pipeline("bow", "naive_bayes",  text_vector = df$text, sentiment_vector = df$y)
 #'
 pipeline <- function(vect_method,
   model_name,
-  df,
-  text_column_name,
-  sentiment_column_name,
+  text_vector,
+  sentiment_vector,
   n_gram = 1,
   tune = FALSE,
-  parallel=FALSE,
-  stratify = TRUE) {
+  parallel=FALSE) {
 
     stopf <- function(...) stop(sprintf(...), call. = FALSE)
 
@@ -83,7 +78,7 @@ pipeline <- function(vect_method,
     }
 
   # Ensure Model name is in Input
-    allowed_models <- c("logistic_regression", "random_forest", "xgboost")
+    allowed_models <- c("logistic_regression", "random_forest", "xgboost", "naive_bayes")
     if (!model_name %in% allowed_models) {
       stopf("Model '%s' is not supported. Use: %s.",
             model_name, paste(allowed_models, collapse = ", "))
@@ -98,9 +93,13 @@ pipeline <- function(vect_method,
     )
 
 
-  if (!is.data.frame(df)) stopf("`df` must be a data.frame.")
-  if (!text_column_name %in% names(df)) stopf("Column '%s' not found.", text_column_name)
-  if (!sentiment_column_name %in% names(df)) stopf("Column '%s' not found.", sentiment_column_name)
+    if (!is.atomic(text_vector)) stopf("`text_vector` must be an atomic vector (usually character).")
+    if (!is.atomic(sentiment_vector) && !is.factor(sentiment_vector)) stopf("`sentiment_vector` must be a vector or factor.")
+
+    if (length(text_vector) != length(sentiment_vector)) {
+      stopf("Length mismatch: `text_vector` has %d elements, but `label_vector` has %d elements.",
+            length(text_vector), length(sentiment_vector))
+    }
 
   #FOR GLMNET ONLY
   if (isTRUE(parallel)) {
@@ -115,56 +114,62 @@ pipeline <- function(vect_method,
   }
 
   message(paste0("--- Running Pipeline: ", toupper(vect_method), " + ", toupper(model_name), " ---\n"))
-  df$sentiment <- as.factor(df[[sentiment_column_name]])
 
-  # --- 1. DATA CLEANING & PREP ---
-  # Remove rows where the cleaned text is empty
+  #drop unnecessary columns and ensure sentiment is a factor
+  initial_length <- length(text_vector)
+  # Force formatting safely
+  text_vector <- trimws(as.character(text_vector))
+  text_vector[text_vector == ""] <- NA_character_
+  sentiment_vector <- as.factor(sentiment_vector)
 
-  initial_rows <- nrow(df)
-  df[[text_column_name]] <- trimws(as.character(df[[text_column_name]]))
-  df[[text_column_name]][df[[text_column_name]] == ""] <- NA_character_
+  # Find valid indices (where neither text nor label is NA)
+  valid_idx <- !is.na(text_vector) & !is.na(sentiment_vector)
 
-  df <- df[!is.na(df[[text_column_name]]) & !is.na(df$sentiment), , drop = FALSE]
+  # Subset vectors simultaneously
+  text_vector <- text_vector[valid_idx]
+  sentiment_vector <- sentiment_vector[valid_idx]
 
-
-  rows_dropped <- initial_rows - nrow(df)
+  rows_dropped <- initial_length - length(text_vector)
 
   if (rows_dropped > 0) {
-    warning(sprintf("Dropped %d row(s) with missing/empty text or missing labels.", rows_dropped),
+    warning(sprintf("Dropped %d element(s) with missing/empty text or missing sentiments(labels).", rows_dropped),
             call. = FALSE)
   }
+  if (length(text_vector) < 5) stopf("Not enough valid data after filtering (%d).", length(text_vector))
+  if (nlevels(sentiment_vector) < 2) stopf("Need at least 2 sentiment classes after filtering.")
 
-  if (nrow(df) < 5) stopf("Not enough rows after filtering (%d).", nrow(df))
-  if (nlevels(df$sentiment) < 2) stopf("Need at least 2 sentiment classes after filtering.")
 
   # --- 2. TRAIN/TEST SPLIT ---
 
+  # Base R Stratified Split
+  train_idx <- unlist(lapply(split(seq_along(sentiment_vector), sentiment_vector), function(idx) {
+    sample(idx, size = round(0.8 * length(idx)))
+  }))
 
-  if (isTRUE(stratify)) {
-    train_idx <- caret::createDataPartition(df$sentiment, p = 0.8, list = FALSE)
-  } else {
-    train_idx <- sample(seq_len(nrow(df)), size = floor(0.8 * nrow(df)))
-  }
+  # Ensure it's a clean numeric vector
+  train_idx <- as.numeric(train_idx)
 
-  data_train <- df[train_idx, , drop = FALSE]
-  data_test  <- df[-train_idx, , drop = FALSE]
+  text_train <- text_vector[train_idx]
+  text_test <- text_vector[-train_idx]
 
-  message(paste0("Data split: ", nrow(data_train), " training rows, ", nrow(data_test), " test rows.\n"))
+  # Split Labels
+  y_train <- sentiment_vector[train_idx]
+  y_test  <- sentiment_vector[-train_idx]
+
+  message(paste0("Data split: ", length(text_train), " training elements, ", length(text_test), " test elements.\n"))
 
   # --- 3. VECTORIZATION ---
   # This now operates on the pre-cleaned text column
   message(sprintf("Vectorizing with %s (ngram=%d)...", toupper(vect_method), n_gram))
 
-  fit <- BOW_train(data_train[[text_column_name]],
+  fit <- BOW_train(text_train,
                    weighting_scheme = vect_method,
                    ngram_size = n_gram)
   X_train <- fit$dfm_template
 
-  X_test <- BOW_test(data_test[[text_column_name]],fit)
+  X_test <- BOW_test(text_test,fit)
 
-  # Prepare the response variables (y)
-  y_train <- data_train$sentiment
-  y_test <- data_test$sentiment
+
 
   # --- 4. MODEL TRAINING & PREDICTION ---
 
@@ -181,26 +186,68 @@ pipeline <- function(vect_method,
 
 
   # --- 5. EVALUATION ---
-
+  # A Evaluation
   predictions <- model_results$pred
-  predictions_factor <- factor(predictions, levels = levels(y_test))
 
-  evaluation <- caret::confusionMatrix(
-  data = predictions_factor,
-  reference = y_test,
-  mode = "everything"
-  )
+  # Using Custom function for evaluation
+  evaluation <- evaluate_metrics(
+    predicted = predictions,
+    actual = y_test
+)
 
+  # B ROC/AUC
+  roc_guidance <- NULL
 
+  # We only calculate ROC for Binary classification (2 levels)
+  if (nlevels(y_test) == 2) {
+    target_class <- levels(y_test)[2] # Usually the "Positive" class
+    #  Extract strictly by name.
+    # Since we fixed the models, we TRUST that 'probs' is a matrix with this column.
+    pos_probs <- model_results$probs[, target_class]
+
+    # Calculate ROC
+    roc_obj <- pROC::roc(response = y_test, predictor = as.vector(pos_probs), quiet = TRUE)
+
+    # Get the "Best" threshold using Youden's J statistic
+    best_coords <- pROC::coords(roc_obj, "best", ret = c("threshold", "specificity", "sensitivity"), transpose = FALSE)
+
+    roc_guidance <- list(
+      auc = as.numeric(pROC::auc(roc_obj)),
+      best_threshold = best_coords$threshold,
+      roc_object = roc_obj # Save this if you want to plot it later
+    )
+  }
+ # Map the model_name to our internal shorthand for the router
+ internal_type_map <- c(
+  "logistic_regression" = "logit",
+  "random_forest" = "rf",
+  "xgboost" = "xgb",
+  "naive_bayes" = "nb"
+)
   # --- 6. RETURN FINAL RESULTS ---
   final_output <- list(
-  trained_model = model_results$model,
-  dfm_template = fit,
-  class_levels = levels(y_test),
-  ngram_size_used = n_gram,
-  vectorize_test_function = BOW_test,
-  evaluation_report = evaluation
-  )
+      trained_model = model_results$model,
+      model_type    = internal_type_map[model_name],
+      best_lambda   = model_results$best_lambda, # <- for glmnet only
+      dfm_template = fit,
+      class_levels = levels(y_test),
+      ngram_size_used = n_gram,
+      vectorize_test_function = BOW_test,
+      evaluation_report = evaluation,
+      guidance = roc_guidance
+      )
+
+  # Print the final completion message
+  message("\n======================================================")
+  message(sprintf(" PIPELINE COMPLETE: %s + %s", toupper(vect_method), toupper(model_name)))
+
+  if (!is.null(roc_guidance)) {
+    message(sprintf(" Model AUC: %.3f", roc_guidance$auc))
+    message(sprintf(" Recommended ROC Threshold: %.3f", roc_guidance$best_threshold))
+  } else {
+    message(" (ROC/AUC not calculated for multi-class data)")
+  }
+  message("======================================================\n")
 
   return(final_output)
-  }
+}

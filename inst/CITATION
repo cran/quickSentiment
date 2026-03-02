@@ -1,0 +1,11 @@
+citHeader("To cite quickSentiment in publications use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "quickSentiment: A Fast and Flexible Pipeline for Text Classification",
+  author = person("A.", "Dahal"),
+  year = "2026",
+  note = "1 R package version 0.3.1. Available on CRAN",
+  url = "https://CRAN.R-project.org/package=quickSentiment",
+  textVersion = "Dahal, A. (2026). quickSentiment: A Fast and Flexible Pipeline for Text Classification. 1 R package version 0.2.0. Available on CRAN"
+)

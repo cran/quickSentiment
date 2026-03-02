@@ -9,12 +9,15 @@ pre_process(
   remove_brackets = TRUE,
   remove_urls = TRUE,
   remove_html = TRUE,
-  remove_nums = TRUE,
+  remove_nums = FALSE,
   remove_emojis_flag = TRUE,
   to_lowercase = TRUE,
   remove_punct = TRUE,
   remove_stop_words = TRUE,
-  lemmatize = TRUE
+  custom_stop_words = NULL,
+  keep_words = NULL,
+  lemmatize = TRUE,
+  retain_negations = TRUE
 )
 }
 \arguments{
@@ -36,7 +39,13 @@ pre_process(
 
 \item{remove_stop_words}{A logical value indicating whether to remove English stopwords.}
 
+\item{custom_stop_words}{A character vector of additional custom words to remove (e.g., c("rt", "via")). Default is NULL.}
+
+\item{keep_words}{A character vector of words to protect from deletion (e.g., c("no", "not", "nor")). Default is NULL.}
+
 \item{lemmatize}{A logical value indicating whether to lemmatize words to their dictionary form.}
+
+\item{retain_negations}{Logical. If \code{TRUE} (the default), automatically protects common negation words (e.g., "not", "no", "never") from being deleted by the standard stopword list to preserve sentiment context.}
 }
 \value{
 A character vector of the cleaned and preprocessed text.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/nb.R
 \name{nb_model}
 \alias{nb_model}
-\title{Train a Naive Bayes Model}
+\title{Multinomial Naive Bayes for Text Classification}
 \usage{
 nb_model(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE)
 }
@@ -20,17 +20,34 @@ features as `train_vectorized`}
 
 \item{tune}{Logical. If TRUE, tests different Laplace smoothing values.}
 }
+\value{
+A list containing four elements:
+  \item{pred}{A vector of class predictions for the test set.}
+  \item{probs}{A matrix of predicted probabilities.}
+  \item{model}{The final, trained `naivebayes` model object.}
+  \item{best_lambda}{Placeholder (NULL) for pipeline consistency.}
+}
 \description{
-Train a Naive Bayes Model
+Multinomial Naive Bayes for Text Classification
 }
 \examples{
-#Create dummy vectorized data
-train_matrix <- matrix(runif(100), nrow = 10)
-test_matrix <- matrix(runif(50), nrow = 5)
-colnames(train_matrix) <- paste0("word", 1:10)
-colnames(test_matrix) <- paste0("word", 1:10)
+# 1. Create dummy numeric matrices with BOTH row and column names
+train_matrix <- matrix(
+  as.numeric(sample(0:5, 100, replace = TRUE)),
+  nrow = 10, ncol = 10,
+  dimnames = list(paste0("doc", 1:10), paste0("word", 1:10))
+)
+
+test_matrix <- matrix(
+  as.numeric(sample(0:5, 50, replace = TRUE)),
+  nrow = 5, ncol = 10,
+  dimnames = list(paste0("doc", 1:5), paste0("word", 1:10))
+)
+
+# 2. Create dummy target variable
 y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
-# Run model
+
+# 3. Run model
 model_results <- nb_model(train_matrix, y_train, test_matrix)
 print(model_results$pred)
 }

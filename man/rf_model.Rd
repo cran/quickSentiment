@@ -17,26 +17,33 @@ features as `train_vectorized`.}
 
 \item{parallel}{Logical}
 
-\item{tune}{Logical}
+\item{tune}{Logical. If TRUE, tunes `mtry` using native OOB error}
 }
 \value{
-A list containing two elements:
+A list containing four elements:
   \item{pred}{A vector of class predictions for the test set.}
+  \item{probs}{A matrix of predicted probabilities.}
   \item{model}{The final, trained `ranger` model object.}
+  \item{best_lambda}{Placeholder (NULL) for pipeline consistency.}
 }
 \description{
 This function trains a Random Forest model using the high-performance ranger
-package. It handles the necessary conversion from a sparse DFM to a dense
-matrix and corrects for column name inconsistencies.
+package. It natively utilizes sparse matrices (dgCMatrix) to avoid memory
+exhaustion and utilizes Out-Of-Bag (OOB) error for rapid hyperparameter tuning.
 }
 \examples{
-# Create dummy vectorized data
-train_matrix <- matrix(runif(100), nrow = 10)
-test_matrix <- matrix(runif(50), nrow = 5)
+\dontrun{
+# Create dummy vectorized training and test data
+train_matrix <- matrix(runif(100), nrow = 10, ncol = 10)
+test_matrix <- matrix(runif(50), nrow = 5, ncol = 10)
+
+# Provide column names (vocabulary) required by ranger
+colnames(train_matrix) <- paste0("word", 1:10)
+colnames(test_matrix) <- paste0("word", 1:10)
+
 y_train <- factor(sample(c("P", "N"), 10, replace = TRUE))
 
-# Run model
+# Run random forest model
 model_results <- rf_model(train_matrix, y_train, test_matrix)
-print(model_results$pred)
-
+}
 }

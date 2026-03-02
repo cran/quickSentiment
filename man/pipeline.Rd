@@ -7,13 +7,11 @@
 pipeline(
   vect_method,
   model_name,
-  df,
-  text_column_name,
-  sentiment_column_name,
+  text_vector,
+  sentiment_vector,
   n_gram = 1,
   tune = FALSE,
-  parallel = FALSE,
-  stratify = TRUE
+  parallel = FALSE
 )
 }
 \arguments{
@@ -34,20 +32,16 @@ Defaults to \code{"logistic_regression"}.
   \item \code{"logistic_regression"} (Alias: \code{"logit"}, \code{"glm"})
 }}
 
-\item{df}{The input data frame.}
+\item{text_vector}{A character vector containing the **preprocessed** text.}
 
-\item{text_column_name}{The name of the column containing the **preprocessed** text.}
-
-\item{sentiment_column_name}{The name of the column containing the original target labels (e.g., ratings).}
+\item{sentiment_vector}{A vector or factor containing the target labels (e.g., ratings).}
 
 \item{n_gram}{The n-gram size to use for BoW/TF-IDF. Defaults to 1.}
 
-\item{tune}{Logical. If TRUE, the pipeline will perform hyperparameter tuning 
+\item{tune}{Logical. If TRUE, the pipeline will perform hyperparameter tuning
 for the selected model. Defaults to FALSE. [NEW]}
 
 \item{parallel}{If TRUE, runs model training in parallel. Default FALSE.}
-
-\item{stratify}{If TRUE, use stratified split by sentiment. Default TRUE.}
 }
 \value{
 A list containing the trained model object, the DFM template,
@@ -66,7 +60,6 @@ df <- data.frame(
 )
 
 
-out1 <- pipeline("bow", "logistic_regression", df, "text", "y")
-out2 <- pipeline("tfidf", "rf", df, "text", "y") # 'rf' automatically converts to 'random_forest'
+out <- pipeline("bow", "naive_bayes",  text_vector = df$text, sentiment_vector = df$y)
 
 }

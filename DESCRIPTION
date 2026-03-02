@@ -1,27 +1,30 @@
 Package: quickSentiment
 Title: A Fast and Flexible Pipeline for Text Classification
-Version: 0.2.0
+Version: 0.3.1
 Authors@R: 
     person("Alabhya", "Dahal", email = "alabhya.dahal@gmail.com", role = c("aut", "cre"))
-Description: A high-level wrapper that simplifies text classification into three streamlined steps: preprocessing, 
-      model training, and prediction. 
-    It unifies the interface for multiple algorithms (including 'glmnet', 
-    'ranger', and 'xgboost') and vectorization methods (Bag-of-Words, Term Frequency-Inverse Document Frequency (TF-IDF)), 
-    allowing users to go from raw text to a trained sentiment model in two function 
-    calls. The resulting model artifact automatically handles preprocessing for 
-    new datasets in the third step, ensuring consistent prediction pipelines.
+Description: A high-level pipeline that simplifies text classification into three streamlined steps: 
+    preprocessing, model training, and standardized prediction. 
+    It unifies the interface for multiple algorithms (including 'glmnet', 'ranger', 
+    'xgboost', and 'naivebayes') and memory-efficient sparse matrix vectorization 
+    methods (Bag-of-Words, Term Frequency, TF-IDF, and Binary). Users can go from 
+    raw text to a fully evaluated sentiment model, complete with ROC-optimized 
+    thresholds, in just a few function calls. The resulting model artifact 
+    automatically aligns the vocabulary of new datasets during the prediction phase, 
+    safely appending predicted classes and probability matrices directly to the 
+    user's original dataframe to preserve metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.2
-Imports: quanteda, stopwords, foreach, stringr, textstem, glmnet,
-        ranger, xgboost, naivebayes, caret, Matrix, magrittr,
-        doParallel
+Imports: doParallel, foreach, glmnet, magrittr, Matrix, methods,
+        naivebayes, pROC, quanteda, ranger, stopwords, stringr,
+        textstem, xgboost
 VignetteBuilder: knitr
 Suggests: knitr, rmarkdown, spelling
 Language: en-US
 NeedsCompilation: no
-Packaged: 2026-02-15 03:53:52 UTC; meala
+Packaged: 2026-03-02 01:21:53 UTC; meala
 Author: Alabhya Dahal [aut, cre]
 Maintainer: Alabhya Dahal <alabhya.dahal@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-02-15 05:10:02 UTC
+Date/Publication: 2026-03-02 03:20:03 UTC

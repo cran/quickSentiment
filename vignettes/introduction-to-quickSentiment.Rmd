@@ -36,9 +36,9 @@ set.seed(123)
 
 # --- 3. PREPROCESS THE TEXT ---
 # -------------------------------------------------------------------
-# Use the pre_process() function from our package to clean the raw text.
-# This step is done externally to the main pipeline, allowing you to reuse
-# the same cleaned text for multiple different models or analyses in the future.
+## Use the pre_process() function from our package to clean the raw text.
+## This step is done externally to the main pipeline, allowing you to reuse
+## the same cleaned text for multiple different models or analyses in the future.
 
 
 ```{r}
@@ -48,41 +48,40 @@ tweets$sentiment = ifelse(tweets$Avg>0,'P','N')
 
 # --- 4. RUN THE MAIN TRAINING PIPELINE ---
 # -------------------------------------------------------------------
-# This is the core of the package. We call the main pipeline() function
-# to handle the train/test split, vectorization, model training, and evaluation.
+## This is the core of the package. We call the main pipeline() function
+## to handle the train/test split, vectorization, model training, and evaluation.
 
 ```{r}
 result <- pipeline(
   # --- Define the vectorization method ---
-  # Options: "bow" (raw counts), "tf" (term frequency), "tfidf"
+  # Options: "bow" (raw counts), "tf" (term frequency), "tfidf", "binary"
   vect_method = "tf",
   
   # --- Define the model to train ---
-  # Options: "logit", "rf", "xgb"
+  # Options: "logit", "rf", "xgb","nb"
   model_name = "rf",
   
   # --- Specify the data and column names ---
-  df = tweets,
-  text_column_name = "cleaned_text",      # The column with our preprocessed text
-  sentiment_column_name = "sentiment",    # The column with the target variable
+  text_vector = tweets$cleaned_text  ,   # The column with our preprocessed text
+  sentiment_vector = tweets$sentiment,    # The column with the target variable
   
   # --- Set vectorization options ---
   # Use n_gram = 2 for unigrams + bigrams, or 1 for just unigrams
-  n_gram = 1
+  n_gram = 1,
+  parallel = cores
 )
 ```
 # ===================================================================
 # --- 5. PREDICTION ON NEW, UNSEEN DATA ---
 # ===================================================================
-# The training is complete. The 'result' object now contains our trained
-# model and all the necessary "artifacts" for prediction.
+## The training is complete. The 'result' object now contains our trained
+## model and all the necessary "artifacts" for prediction.
 ```{r}
 
-tweets$sentimentPredict <- prediction(
+predicted_tweets <- predict_sentiment(
   pipeline_object = result,
-  df = tweets,
-  text_column = "cleaned_text"
+  tweets$cleaned_text
 )
-
+head(predicted_tweets)
 ```
 
