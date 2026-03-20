@@ -1,19 +1,12 @@
-# quickSentiment 0.3.1
+# quickSentiment 0.3.2
 
 ## Major Changes & API Updates
-* `pipeline()` now accepts raw atomic vectors (`text_vector` and `sentiment_vector`) instead of full dataframes, drastically improving memory efficiency.
-* Renamed the `prediction()` function to `predict_sentiment()` to prevent namespace collisions with base R generic functions.
+* `pipeline()` no longer computes ROC or returns ROC guidelines
+* `predict_sentiment()` no longer inherits a threshold directly from the pipeline. It now defaults to a standard 0.5 classification threshold, while still allowing users to manually pass the custom cutoff they feel most comfortable with.
+* `evaluate_performance()` is now available. Users can now pass model predictions and test data to calculate detailed metrics (including AUC, Precision, and Recall) targeted at any specific factor level or class of interest.
 
 ## Performance & Dependency Improvements
-* Removed the `caret` dependency entirely. Cross-validation folds and confusion matrix evaluations are now handled via lightweight custom implementations.
-* The vectorization pipeline now strictly utilizes `dgCMatrix` sparse matrices, ensuring the package scales efficiently for large text datasets.
+* `pipeline()` does less computing then before
 
 ## New Features
-* Models now return explicit class probabilities alongside the final predicted categories.
-* Added automated ROC/AUC calculations for binary classification. The pipeline now returns an optimized threshold, which `predict_sentiment()` utilizes by default.
-* Users can now manually define classification thresholds during inference.
-* Upgraded text preprocessing capabilities with advanced arguments for custom stop words, retained words, and default corrections for `quanteda` stop word dictionaries.
-
-## Bug Fixes
-* Resolved an initialization bug that incorrectly prevented the use of the Naive Bayes (`nb`) model.
-* Fixed a compatibility error that occurred when pairing TF-IDF vectorization with Random Forest (`rf`) models.
+* The new evaluate_performance() engine leverages R's S3 object-oriented system. It returns custom evaluation objects that natively integrate with base R's plot() function to instantly generate high-quality ROC and Precision-Recall curves.

@@ -4,7 +4,7 @@
 \alias{predict_sentiment}
 \title{Predict Sentiment on New Data Using a Saved Pipeline Artifact}
 \usage{
-predict_sentiment(pipeline_object, text_column, threshold = NULL)
+predict_sentiment(pipeline_object, text_column, threshold = 0.5)
 }
 \arguments{
 \item{pipeline_object}{A list object returned by the main `pipeline()` function.

@@ -29,7 +29,6 @@
 #' @importFrom parallel detectCores makeCluster stopCluster
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach registerDoSEQ
-#' @importFrom pROC roc auc coords
 #' @export
 #' @examples
 #' df <- data.frame(
@@ -185,46 +184,15 @@ pipeline <- function(vect_method,
   }
 
 
-  # --- 5. EVALUATION ---
-  # A Evaluation
-  predictions <- model_results$pred
+  # --- 5. PACKAGE ARTIFACTS ---
 
-  # Using Custom function for evaluation
-  evaluation <- evaluate_metrics(
-    predicted = predictions,
-    actual = y_test
-)
-
-  # B ROC/AUC
-  roc_guidance <- NULL
-
-  # We only calculate ROC for Binary classification (2 levels)
-  if (nlevels(y_test) == 2) {
-    target_class <- levels(y_test)[2] # Usually the "Positive" class
-    #  Extract strictly by name.
-    # Since we fixed the models, we TRUST that 'probs' is a matrix with this column.
-    pos_probs <- model_results$probs[, target_class]
-
-    # Calculate ROC
-    roc_obj <- pROC::roc(response = y_test, predictor = as.vector(pos_probs), quiet = TRUE)
-
-    # Get the "Best" threshold using Youden's J statistic
-    best_coords <- pROC::coords(roc_obj, "best", ret = c("threshold", "specificity", "sensitivity"), transpose = FALSE)
-
-    roc_guidance <- list(
-      auc = as.numeric(pROC::auc(roc_obj)),
-      best_threshold = best_coords$threshold,
-      roc_object = roc_obj # Save this if you want to plot it later
-    )
-  }
- # Map the model_name to our internal shorthand for the router
  internal_type_map <- c(
   "logistic_regression" = "logit",
   "random_forest" = "rf",
   "xgboost" = "xgb",
   "naive_bayes" = "nb"
 )
-  # --- 6. RETURN FINAL RESULTS ---
+  # ---  RETURN FINAL RESULTS ---
   final_output <- list(
       trained_model = model_results$model,
       model_type    = internal_type_map[model_name],
@@ -232,21 +200,20 @@ pipeline <- function(vect_method,
       dfm_template = fit,
       class_levels = levels(y_test),
       ngram_size_used = n_gram,
-      vectorize_test_function = BOW_test,
-      evaluation_report = evaluation,
-      guidance = roc_guidance
+      probs = model_results$probs,
+      y_test= y_test
       )
 
-  # Print the final completion message
-  message("\n======================================================")
-  message(sprintf(" PIPELINE COMPLETE: %s + %s", toupper(vect_method), toupper(model_name)))
+  # --- 6. USER GUIDANCE MESSAGE ---
+  baseline_accuracy <- mean(model_results$pred== y_test)
+  acc_pct <- round(baseline_accuracy * 100, 2)
 
-  if (!is.null(roc_guidance)) {
-    message(sprintf(" Model AUC: %.3f", roc_guidance$auc))
-    message(sprintf(" Recommended ROC Threshold: %.3f", roc_guidance$best_threshold))
-  } else {
-    message(" (ROC/AUC not calculated for multi-class data)")
-  }
+  message("\n======================================================")
+  message(" --- quickSentiment Pipeline Complete ---")
+  message(sprintf(" Model Type: %s", toupper(model_name)))
+  message(sprintf(" Vectorizer: %s (ngram=%d)", toupper(vect_method), n_gram))
+  message(sprintf(" Test Set Size: %d rows", length(y_test)))
+  message(sprintf(" Accuracy of %s%% under baseline threshold.", acc_pct))
   message("======================================================\n")
 
   return(final_output)

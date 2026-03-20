@@ -26,7 +26,7 @@
 #'
 predict_sentiment <- function(pipeline_object,
                        text_column,
-                       threshold = NULL) {
+                       threshold = 0.5) {
 
   # --- 1. Extract the necessary artifacts from the pipeline object ---
   final_model <- pipeline_object$trained_model
@@ -40,20 +40,16 @@ predict_sentiment <- function(pipeline_object,
     text_column,
     dfm_template)
 
-  # Set Up Threshold
-  if (is.null(threshold)) {
-    # No user value. Do we have a "Smart" value from training?
-    if (!is.null(pipeline_object$guidance$best_threshold)) {
-      threshold <- pipeline_object$guidance$best_threshold
-      message(sprintf("Using optimized threshold: %.3f", threshold))
+  # --- 3. Multi-Class Guardrail ---
+  # If there are more than 2 classes, thresholds mathematically do not apply.
+  if (length(class_levels) > 2) {
+    if (threshold != 0.5) {
+      warning("Threshold argument is ignored for multi-class prediction. Assigning class based on highest probability.")
     }
-    # 3. Fallback
-    else {
-      threshold <- 0.5
-    }
+    threshold <- NULL # Pass NULL so route_prediction knows to just use max probability
   }
 
-  # --- 3. Conditional Prediction based on Model Class ---
+  # --- 4. Conditional Prediction based on Model Class ---
   message("--- Making Predictions ---\n")
 
   results <- route_prediction(
@@ -63,7 +59,7 @@ predict_sentiment <- function(pipeline_object,
     Y_levels = class_levels,
     threshold = threshold
   )
-  #--- 4.  Output
+  #--- 5.  Output
   final_output <- data.frame(predicted_class = results$pred)
 
   prob_df <- as.data.frame(results$probs)

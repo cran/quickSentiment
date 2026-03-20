@@ -117,12 +117,16 @@ route_prediction <- function(new_data_vectorized, qs_artifact, model_type, Y_lev
   colnames(probs_matrix) <- Y_levels
 
   # --- 4. CONVERT PROBABILITIES TO CLASSES ---
+  if (is.null(threshold)) {
+    threshold <- 0.5
+  }
+
   if (ncol(probs_matrix) == 2) {
     # Binary: If Prob(Class2) > threshold, predict Class2
-    y_pred_idx <- ifelse(probs_matrix[, 2] > threshold, 2, 1)
+    y_pred_idx <- ifelse(probs_matrix[, 2] >= threshold, 2, 1)
   } else {
     # Multiclass: Pick column with max probability (threshold is naturally ignored)
-    y_pred_idx <- max.col(probs_matrix)
+    y_pred_idx <- max.col(probs_matrix, ties.method = "first")
   }
 
   # Rebuild the final factor vector safely

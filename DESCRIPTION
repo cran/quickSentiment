@@ -1,6 +1,6 @@
 Package: quickSentiment
 Title: A Fast and Flexible Pipeline for Text Classification
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: 
     person("Alabhya", "Dahal", email = "alabhya.dahal@gmail.com", role = c("aut", "cre"))
 Description: A high-level pipeline that simplifies text classification into three streamlined steps: 
@@ -15,16 +15,16 @@ Description: A high-level pipeline that simplifies text classification into thre
     user's original dataframe to preserve metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: doParallel, foreach, glmnet, magrittr, Matrix, methods,
-        naivebayes, pROC, quanteda, ranger, stopwords, stringr,
-        textstem, xgboost
+        naivebayes, quanteda, ranger, stopwords, stringr, textstem,
+        xgboost
 VignetteBuilder: knitr
 Suggests: knitr, rmarkdown, spelling
 Language: en-US
 NeedsCompilation: no
-Packaged: 2026-03-02 01:21:53 UTC; meala
+Packaged: 2026-03-20 06:08:54 UTC; meala
 Author: Alabhya Dahal [aut, cre]
 Maintainer: Alabhya Dahal <alabhya.dahal@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-03-02 03:20:03 UTC
+Date/Publication: 2026-03-20 06:20:02 UTC
