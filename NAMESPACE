@@ -2,6 +2,7 @@
 
 S3method(plot,quickSentiment_prc)
 S3method(plot,quickSentiment_roc)
+S3method(print,quickSentiment_eval)
 export(BOW_test)
 export(BOW_train)
 export(evaluate_performance)

@@ -44,3 +44,33 @@ plot.quickSentiment_prc <- function(x, ...) {
   points(x$curve$TPR_Recall[best_idx], x$curve$Precision[best_idx],
          col = "red", pch = 19, cex = 1.5)
 }
+#' Print quickSentiment Evaluation Results
+#'
+#' @param x An object of class `quickSentiment_eval`.
+#' @param ... Further arguments passed to or from other methods.
+#' @export
+print.quickSentiment_eval <- function(x, ...) {
+
+  cat("=========================================\n")
+  cat(" quickSentiment Model Evaluation \n")
+  cat("=========================================\n")
+  cat("Target Class:  ", x$target_class, "\n\n")
+
+  cat("--- Global Metrics ---\n")
+  cat("ROC AUC:       ", round(x$auc_roc, 4), "\n")
+  cat("PR AUC:        ", round(x$auc_pr, 4), "\n\n")
+
+  cat("--- Optimal Thresholds ---\n")
+  cat("Best ROC Threshold (Youden's J): ", round(x$best_threshold_roc, 4), "\n")
+  cat("Best PR Threshold (F1-Score):    ", round(x$best_threshold_pr, 4), "\n")
+  cat("Accuracy at Best PR Threshold:   ", round(x$accuracy_at_best, 4), "\n\n")
+
+  cat("--- Threshold Summary Table ---\n")
+  # Print the user's custom table, rounded nicely to 3 decimal places
+  print(round(x$threshold_summary, 3), row.names = FALSE)
+
+  cat("\n(Note: Use plot() to view ROC and PR curves)\n")
+
+  # Return the object invisibly so the data isn't lost
+  invisible(x)
+}

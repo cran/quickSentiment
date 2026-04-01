@@ -21,7 +21,9 @@ An object of class `quickSentiment_eval`, which is a list containing the followi
   \item{auc_pr}{Numeric. The Area Under the Precision-Recall curve.}
   \item{best_threshold_pr}{Numeric. The probability threshold that maximizes the F1-Score.}
   \item{accuracy_at_best}{Numeric. The overall accuracy of the model if `best_threshold_pr` is applied.}
-  \item{curve_data}{A data frame containing the coordinates to plot the curves.}
+  \item{roc}{S3 object containing the ROC curve data and metrics.}
+  \item{prc}{S3 object containing the Precision-Recall curve data and metrics.}
+  \item{threshold_summary}{A data frame summarizing Accuracy, Precision, Recall, and F1 at 0.1 threshold increments.}
 }
 \description{
 Evaluate Model Performance (ROC and Precision-Recall)

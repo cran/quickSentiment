@@ -10,7 +10,9 @@
 #'   \item{auc_pr}{Numeric. The Area Under the Precision-Recall curve.}
 #'   \item{best_threshold_pr}{Numeric. The probability threshold that maximizes the F1-Score.}
 #'   \item{accuracy_at_best}{Numeric. The overall accuracy of the model if `best_threshold_pr` is applied.}
-#'   \item{curve_data}{A data frame containing the coordinates to plot the curves.}
+#'   \item{roc}{S3 object containing the ROC curve data and metrics.}
+#'   \item{prc}{S3 object containing the Precision-Recall curve data and metrics.}
+#'   \item{threshold_summary}{A data frame summarizing Accuracy, Precision, Recall, and F1 at 0.1 threshold increments.}
 #' @export
 evaluate_performance <- function(predicted_probs, actual_classes, positive_label) {
 
@@ -67,6 +69,15 @@ evaluate_performance <- function(predicted_probs, actual_classes, positive_label
     F1 = f1_score
   )
 
+  # --- NEW: DOWNSAMPLING ---
+  # If data is large, skip every 10 rows but guarantee best indices are kept
+  n_rows <- nrow(curve_data)
+  if (n_rows > 1000) {
+    keep_idx <- unique(c(1, seq(1, n_rows, by = 10), best_idx_pr, best_idx_roc, n_rows))
+    keep_idx <- sort(keep_idx) # Sort to keep the curve chronological
+    curve_data <- curve_data[keep_idx, ]
+  }
+
   # --- Create dedicated S3 objects for the individual curves ---
   roc_object <- list(
     curve = curve_data,
@@ -82,6 +93,34 @@ evaluate_performance <- function(predicted_probs, actual_classes, positive_label
   )
   class(prc_object) <- "quickSentiment_prc"
 
+  # --- NEW: User's Requested Threshold Summary Table ---
+  # Calculate Accuracy, Precision, Recall, and F1 at exact 0.1 increments
+  summary_thresholds <- seq(0, 1, by = 0.1)
+  summary_table <- data.frame(
+    Threshold = summary_thresholds,
+    Accuracy = NA, Precision = NA, Recall = NA, F1 = NA
+  )
+
+  for(i in 1:nrow(summary_table)) {
+    th <- summary_table$Threshold[i]
+    pred_pos <- predicted_probs >= th
+
+    tp <- sum(pred_pos & is_positive)
+    fp <- sum(pred_pos & !is_positive)
+    tn <- sum(!pred_pos & !is_positive)
+    fn <- sum(!pred_pos & is_positive)
+
+    acc <- (tp + tn) / (total_pos + total_neg)
+    prec <- ifelse((tp + fp) == 0, 0, tp / (tp + fp))
+    rec <- ifelse((tp + fn) == 0, 0, tp / (tp + fn))
+    f1 <- ifelse((prec + rec) == 0, 0, 2 * (prec * rec) / (prec + rec))
+
+    summary_table$Accuracy[i] <- acc
+    summary_table$Precision[i] <- prec
+    summary_table$Recall[i] <- rec
+    summary_table$F1[i] <- f1
+  }
+
   # --- Package the Results (Flattened correctly!) ---
   results <- list(
     target_class       = positive_label,
@@ -90,9 +129,9 @@ evaluate_performance <- function(predicted_probs, actual_classes, positive_label
     auc_pr             = auc_pr,
     best_threshold_pr  = best_threshold_pr,
     accuracy_at_best   = accuracy_at_best,
-    curve_data         = curve_data, # Safe outside the data frame
     roc                = roc_object, # The ROC S3 Object
-    prc                = prc_object  # The PRC S3 Object
+    prc                = prc_object,  # The PRC S3 Object
+    threshold_summary  = summary_table
   )
 
   structure(results, class = "quickSentiment_eval")
