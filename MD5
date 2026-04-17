@@ -1,9 +1,9 @@
-1e2ba34a3e76e3bbfc32d8ea9ca7f777 *DESCRIPTION
+4288032972b5d781b93a34695c6d26f7 *DESCRIPTION
 a5126f3a0bbfa3e710c597b2e621f889 *LICENSE
 2ee7ffb501d5e8c89dd2a9c083311b51 *NAMESPACE
-89dcdefa0b87e85e5d73f7b4b23b438d *NEWS.md
+700a61fd48ed4680cb01961564b205a4 *NEWS.md
 976a96e081e2d0460773ddf7be628463 *R/BOW.R
-a71297dd69aa2021280f5aac73f9edd0 *R/evaluate_performance.R
+fa48dd6b3888fc8d16dbdb96b37e01a8 *R/evaluate_performance.R
 a56d133f21fb1e6cc883c4f9dd7529a2 *R/logit.R
 96714973fffe605741da698c89b7425a *R/nb.R
 4841da5f72f054b6e0babee8e9cdd4c7 *R/pipeline.R
@@ -17,9 +17,9 @@ b805c06f68a929d97716c3f3626356bf *R/xgb.R
 9daa279a9edb1181e1e25e6720b2c9c4 *build/vignette.rds
 e0bd6520b1b965fa95fc8983c1bf937e *inst/CITATION
 a1c137728d6f1182cadae3e69b13f04b *inst/WORDLIST
-26d7350792ff9c5aaf4d60f93f6e68df *inst/doc/introduction-to-quickSentiment.R
-0fb3e4ddfdf7bc5973ca53dd70195b3d *inst/doc/introduction-to-quickSentiment.Rmd
-5679ac3a5598342d0148e8bd9e52b52e *inst/doc/introduction-to-quickSentiment.html
+a881f3e594b4e2c83c475a144305ff41 *inst/doc/introduction-to-quickSentiment.R
+e238a1a49c99e5a47b7bfe3e0df62b61 *inst/doc/introduction-to-quickSentiment.Rmd
+f39511c6997f58ada5d11f6ad16febb9 *inst/doc/introduction-to-quickSentiment.html
 15d60df8e1e31cd062da4535a753eaf9 *inst/extdata/tweets.csv
 9669819f195115ac2d39441f9f345d59 *man/BOW_test.Rd
 6f646def002977696f67d08254a92b53 *man/BOW_train.Rd
@@ -36,4 +36,4 @@ be490709d6e5d216fc0e3f65d7f2f024 *man/qs_negations.Rd
 412e75123045d2cdd0cd8cfc6ad21075 *man/rf_model.Rd
 5d8679fd1b65b0e3dd2b6c165b9a2b96 *man/xgb_model.Rd
 332173f20d20942c02019350ea4dcadc *tests/spelling.R
-0fb3e4ddfdf7bc5973ca53dd70195b3d *vignettes/introduction-to-quickSentiment.Rmd
+e238a1a49c99e5a47b7bfe3e0df62b61 *vignettes/introduction-to-quickSentiment.Rmd

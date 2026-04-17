@@ -1,8 +1,7 @@
-# quickSentiment 0.3.3
+# quickSentiment 0.3.4
 
-## Major Changes & API Updates
+## Updates
 
-* `evaluate_performance()` minor updates. Does not return a big data frame of all metrics anymore, but rather a decile summary of performance metrics
-
+* `evaluate_performance()` minor updates. Bug fixed
 
 

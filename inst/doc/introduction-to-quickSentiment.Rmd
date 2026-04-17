@@ -72,7 +72,26 @@ result <- pipeline(
 )
 ```
 # ===================================================================
-# --- 5. PREDICTION ON NEW, UNSEEN DATA ---
+# --- 5. EVALUATE THE RESULTS
+# ===================================================================
+## Get the AUC, ROC and Accuracy at Decile Threshold
+
+```{r}
+evaluate_result<- evaluate_performance(result$probs[,2],result$y_test,"P")
+evaluate_result
+```
+
+
+```{r}
+plot(evaluate_result$roc)
+```
+
+
+```{r}
+plot(evaluate_result$prc)
+```
+# ===================================================================
+# --- 6. PREDICTION ON NEW, UNSEEN DATA ---
 # ===================================================================
 ## The training is complete. The 'result' object now contains our trained
 ## model and all the necessary "artifacts" for prediction.

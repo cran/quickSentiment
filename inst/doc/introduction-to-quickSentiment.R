@@ -44,6 +44,16 @@ result <- pipeline(
 )
 
 ## -----------------------------------------------------------------------------
+evaluate_result<- evaluate_performance(result$probs[,2],result$y_test,"P")
+evaluate_result
+
+## -----------------------------------------------------------------------------
+plot(evaluate_result$roc)
+
+## -----------------------------------------------------------------------------
+plot(evaluate_result$prc)
+
+## -----------------------------------------------------------------------------
 
 predicted_tweets <- predict_sentiment(
   pipeline_object = result,

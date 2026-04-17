@@ -28,6 +28,10 @@ evaluate_performance <- function(predicted_probs, actual_classes, positive_label
   total_pos <- sum(is_positive)
   total_neg <- sum(!is_positive)
 
+  if (total_pos == 0 || total_neg == 0) {
+    stop("Requires atleast two class")
+  }
+
   # --- ROC Math ---
   tpr <- tp_cum / total_pos
   fpr <- fp_cum / total_neg
@@ -101,14 +105,17 @@ evaluate_performance <- function(predicted_probs, actual_classes, positive_label
     Accuracy = NA, Precision = NA, Recall = NA, F1 = NA
   )
 
+  unsorted_is_positive <- (actual_classes == positive_label)
+
   for(i in 1:nrow(summary_table)) {
     th <- summary_table$Threshold[i]
-    pred_pos <- predicted_probs >= th
+    pred_pos <- predicted_probs >= th # Unsorted
 
-    tp <- sum(pred_pos & is_positive)
-    fp <- sum(pred_pos & !is_positive)
-    tn <- sum(!pred_pos & !is_positive)
-    fn <- sum(!pred_pos & is_positive)
+    # Compare Unsorted to Unsorted
+    tp <- sum(pred_pos & unsorted_is_positive)
+    fp <- sum(pred_pos & !unsorted_is_positive)
+    tn <- sum(!pred_pos & !unsorted_is_positive)
+    fn <- sum(!pred_pos & unsorted_is_positive)
 
     acc <- (tp + tn) / (total_pos + total_neg)
     prec <- ifelse((tp + fp) == 0, 0, tp / (tp + fp))
