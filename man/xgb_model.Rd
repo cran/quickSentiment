@@ -4,7 +4,14 @@
 \alias{xgb_model}
 \title{Train a Gradient Boosting Model using XGBoost}
 \usage{
-xgb_model(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE)
+xgb_model(
+  train_vectorized,
+  Y,
+  test_vectorized,
+  parallel = FALSE,
+  tune = FALSE,
+  weights = NULL
+)
 }
 \arguments{
 \item{train_vectorized}{The training feature matrix (e.g., a `dfm` from quanteda).}
@@ -17,6 +24,8 @@ features as `train_vectorized`.}
 \item{parallel}{Logical}
 
 \item{tune}{Logical}
+
+\item{weights}{A numeric vector of observation weights. Default is NULL}
 }
 \value{
 A list containing four elements:

@@ -10,6 +10,7 @@
 #'   features as `train_vectorized`.
 #' @param parallel Logical
 #' @param tune Logical. If TRUE, tunes `mtry` using native OOB error
+#' @param weights A numeric vector of observation weights. Default is NULL
 #'
 #' @return A list containing four elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
@@ -37,7 +38,12 @@
 #' # Run random forest model
 #' model_results <- rf_model(train_matrix, y_train, test_matrix)
 #' }
-rf_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE) {
+rf_model <- function(train_vectorized,
+                     Y,
+                     test_vectorized,
+                     parallel = FALSE,
+                     tune = FALSE,
+                     weights = NULL) {
 
   message("\n--- Training Random Forest Model (ranger) ---\n")
 
@@ -73,7 +79,8 @@ rf_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tun
         num.threads = threads,
         importance = "impurity",
         probability = TRUE,   # We need probabilities for ROC/AUC later
-        verbose = FALSE
+        verbose = FALSE,
+        case.weights = weights
       )
      # ranger saves the OOB error automatically!
       # (Since probability=TRUE, this is the Brier score)
@@ -98,7 +105,8 @@ rf_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tun
       num.threads = threads,
       importance = "impurity",
       verbose = FALSE,
-      probability = TRUE
+      probability = TRUE,
+      case.weights = weights
     )
   }
 

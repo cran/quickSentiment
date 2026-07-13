@@ -4,7 +4,14 @@
 \alias{nb_model}
 \title{Multinomial Naive Bayes for Text Classification}
 \usage{
-nb_model(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE)
+nb_model(
+  train_vectorized,
+  Y,
+  test_vectorized,
+  parallel = FALSE,
+  tune = FALSE,
+  weights = NULL
+)
 }
 \arguments{
 \item{train_vectorized}{The training feature matrix (e.g., a `dfm` from quanteda).
@@ -19,6 +26,8 @@ features as `train_vectorized`}
 \item{parallel}{Logical}
 
 \item{tune}{Logical. If TRUE, tests different Laplace smoothing values.}
+
+\item{weights}{A numeric vector of observation weights. Default is NULL}
 }
 \value{
 A list containing four elements:

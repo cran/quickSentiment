@@ -10,6 +10,7 @@ pipeline(
   text_vector,
   sentiment_vector,
   n_gram = 1,
+  balance = FALSE,
   tune = FALSE,
   parallel = FALSE
 )
@@ -37,6 +38,8 @@ Defaults to \code{"logistic_regression"}.
 \item{sentiment_vector}{A vector or factor containing the target labels (e.g., ratings).}
 
 \item{n_gram}{The n-gram size to use for BoW/TF-IDF. Defaults to 1.}
+
+\item{balance}{Logical. If TRUE, calculates inverse class weights to correct for imbalanced datasets. Defaults to FALSE.}
 
 \item{tune}{Logical. If TRUE, the pipeline will perform hyperparameter tuning
 for the selected model. Defaults to FALSE. [NEW]}

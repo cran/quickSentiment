@@ -20,6 +20,7 @@
 #'   }
 #' @param text_vector A character vector containing the **preprocessed** text.
 #' @param sentiment_vector A vector or factor containing the target labels (e.g., ratings).
+#' @param balance Logical. If TRUE, calculates inverse class weights to correct for imbalanced datasets. Defaults to FALSE.
 #' @param n_gram The n-gram size to use for BoW/TF-IDF. Defaults to 1.
 #' @param parallel If TRUE, runs model training in parallel. Default FALSE.
 #' @param tune Logical. If TRUE, the pipeline will perform hyperparameter tuning
@@ -46,6 +47,7 @@ pipeline <- function(vect_method,
   text_vector,
   sentiment_vector,
   n_gram = 1,
+  balance = FALSE,
   tune = FALSE,
   parallel=FALSE) {
 
@@ -141,7 +143,7 @@ pipeline <- function(vect_method,
   # --- 2. TRAIN/TEST SPLIT ---
 
   # Base R Stratified Split
-  train_idx <- unlist(lapply(split(seq_along(sentiment_vector), sentiment_vector), function(idx) {
+     train_idx <- unlist(lapply(split(seq_along(sentiment_vector), sentiment_vector), function(idx) {
     sample(idx, size = round(0.8 * length(idx)))
   }))
 
@@ -156,6 +158,24 @@ pipeline <- function(vect_method,
   y_test  <- sentiment_vector[-train_idx]
 
   message(paste0("Data split: ", length(text_train), " training elements, ", length(text_test), " test elements.\n"))
+
+  # --- 2.5. CLASS WEIGHTING (NEW) ---
+  if (isTRUE(balance)) {
+
+    # Get counts for each class in the training set
+    class_counts <- table(y_train)
+    total_obs <- length(y_train)
+    num_classes <- length(class_counts)
+
+    # Standard formula: Total Observations / (Number of Classes * Count in Class)
+    weight_map <- total_obs / (num_classes * class_counts)
+
+    # Map the correct weight to each individual observation in y_train
+    obs_weights <- as.numeric(weight_map[as.character(y_train)])
+
+  } else {
+    obs_weights <- NULL
+  }
 
   # --- 3. VECTORIZATION ---
   # This now operates on the pre-cleaned text column
@@ -177,7 +197,8 @@ pipeline <- function(vect_method,
     y_train,
     X_test,
     parallel = parallel,
-    tune=tune
+    tune=tune,
+    weights = obs_weights
     )
   if (is.null(model_results$model) || is.null(model_results$pred)) {
     stopf("Model function '%s' must return a list with elements `model` and `pred`.", model_name)

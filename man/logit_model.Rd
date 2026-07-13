@@ -9,7 +9,8 @@ logit_model(
   Y,
   test_vectorized,
   parallel = FALSE,
-  tune = FALSE
+  tune = FALSE,
+  weights = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ features as `train_vectorized`.}
 \item{parallel}{Logical}
 
 \item{tune}{Logical}
+
+\item{weights}{A numeric vector of observation weights. Default is NULL}
 }
 \value{
 A list containing two elements:

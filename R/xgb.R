@@ -10,7 +10,7 @@
 #'   features as `train_vectorized`.
 #' @param parallel Logical
 #' @param tune Logical
-#'
+#' @param weights A numeric vector of observation weights. Default is NULL
 #' @return A list containing four elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
 #'   \item{probs}{A matrix of predicted probabilities.}
@@ -38,7 +38,12 @@
 #' model_results <- xgb_model(train_matrix, y_train, test_matrix)
 #' }
 
-xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tune = FALSE) {
+xgb_model <- function(train_vectorized,
+                      Y,
+                      test_vectorized,
+                      parallel = FALSE,
+                      tune = FALSE,
+                      weights = NULL) {
 
   message("\n--- Training XGBoost Model ---\n")
 
@@ -76,7 +81,7 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tun
   }
 
   # Prepare DMatrix objects (this part is the same)
-  dtrain <- xgboost::xgb.DMatrix(data = X_train_sparse, label = y_train_numeric)
+  dtrain <- xgboost::xgb.DMatrix(data = X_train_sparse, label = y_train_numeric,weight = weights)
   dtest <- xgboost::xgb.DMatrix(data = X_test_sparse)
 
   # --- CONDITIONAL TUNING LOGIC ---
@@ -131,7 +136,7 @@ xgb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE,tun
 
   # Map the numeric predictions back to the original factor labels for evaluation
   y_pred_factor <- factor(y_pred_numeric, levels = 0:(num_classes-1), labels = levels(Y))
- 
+
   # --- ENFORCE THE CONTRACT (this part is the same) ---
   results <- list(
     pred = y_pred_factor,

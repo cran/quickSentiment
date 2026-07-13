@@ -12,6 +12,7 @@
 #'   features as `train_vectorized`.
 #' @param parallel Logical
 #' @param tune Logical
+#' @param weights A numeric vector of observation weights. Default is NULL
 #'
 #' @return A list containing two elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
@@ -39,7 +40,13 @@
 #' # Run logistic regression model (glmnet)
 #' model_results <- logit_model(train_matrix, y_train, test_matrix)
 #' }
-logit_model <- function(train_vectorized, Y, test_vectorized, parallel=FALSE, tune = FALSE){
+logit_model <- function(train_vectorized,
+                        Y,
+                        test_vectorized,
+                        parallel=FALSE,
+                        tune = FALSE,
+                        weights = NULL){
+
   message("\n--- Running Logistic Regression (logit) Function ---\n")
   fam <- if (nlevels(Y) > 2) "multinomial" else "binomial"
   final_fit <- NULL
@@ -58,7 +65,8 @@ logit_model <- function(train_vectorized, Y, test_vectorized, parallel=FALSE, tu
         family = fam,
         alpha = a,
         nfolds = 5,
-        parallel = parallel
+        parallel = parallel,
+        weights = weights
       )
 
     # Get the minimum error for this alpha
@@ -78,7 +86,8 @@ logit_model <- function(train_vectorized, Y, test_vectorized, parallel=FALSE, tu
     alpha = 1,           #  Lasso regularization
     nfolds = 5,
     family= fam,
-    parallel = parallel
+    parallel = parallel,
+    weights = weights
   )
   best_s <- final_fit$lambda.min
   }

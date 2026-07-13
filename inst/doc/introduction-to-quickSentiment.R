@@ -39,6 +39,8 @@ result <- pipeline(
   
   # --- Set vectorization options ---
   # Use n_gram = 2 for unigrams + bigrams, or 1 for just unigrams
+  #these are optional parameters
+  balance = TRUE,
   n_gram = 1,
   parallel = cores
 )

@@ -8,6 +8,7 @@
 #'   features as `train_vectorized`
 #' @param parallel Logical
 #' @param tune Logical. If TRUE, tests different Laplace smoothing values.
+#' @param weights A numeric vector of observation weights. Default is NULL
 #' @return A list containing four elements:
 #'   \item{pred}{A vector of class predictions for the test set.}
 #'   \item{probs}{A matrix of predicted probabilities.}
@@ -38,7 +39,7 @@
 #' model_results <- nb_model(train_matrix, y_train, test_matrix)
 #' print(model_results$pred)
 
-nb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE) {
+nb_model <- function(train_vectorized, Y, test_vectorized, parallel = FALSE, tune = FALSE,weights = NULL) {
 
   message("\n--- Training Multinomial Naive Bayes ---\n")
 
