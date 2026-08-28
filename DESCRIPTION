@@ -1,6 +1,6 @@
 Package: quickSentiment
 Title: A Fast and Flexible Pipeline for Text Classification
-Version: 0.3.5
+Version: 0.3.6
 Authors@R: 
     person("Alabhya", "Dahal", email = "alabhya.dahal@gmail.com", role = c("aut", "cre"))
 Description: A high-level pipeline that simplifies text classification into three streamlined steps: 
@@ -23,8 +23,8 @@ VignetteBuilder: knitr
 Suggests: knitr, rmarkdown, spelling
 Language: en-US
 NeedsCompilation: no
-Packaged: 2026-07-13 02:05:31 UTC; meala
+Packaged: 2026-08-28 21:11:53 UTC; meala
 Author: Alabhya Dahal [aut, cre]
 Maintainer: Alabhya Dahal <alabhya.dahal@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-07-13 05:30:02 UTC
+Date/Publication: 2026-08-28 21:30:09 UTC

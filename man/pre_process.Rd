@@ -2,7 +2,7 @@
 % Please edit documentation in R/pre_process.R
 \name{pre_process}
 \alias{pre_process}
-\title{Preprocess a Vector of Text Documents}
+\title{Preprocess a Vector of Text Documents (Chunked, With Row-Level Fault Isolation)}
 \usage{
 pre_process(
   doc_vector,
@@ -17,7 +17,8 @@ pre_process(
   custom_stop_words = NULL,
   keep_words = NULL,
   lemmatize = TRUE,
-  retain_negations = TRUE
+  retain_negations = TRUE,
+  chunk_size = 5000
 )
 }
 \arguments{
@@ -45,31 +46,36 @@ pre_process(
 
 \item{lemmatize}{A logical value indicating whether to lemmatize words to their dictionary form.}
 
-\item{retain_negations}{Logical. If \code{TRUE} (the default), automatically protects common negation words (e.g., "not", "no", "never") from being deleted by the standard stopword list to preserve sentiment context.}
+\item{retain_negations}{Logical. If \code{TRUE} (the default), automatically protects common negation words.}
+
+\item{chunk_size}{Integer. Number of documents processed per vectorized batch.
+Defaults to 5000. Larger chunks are faster on clean data; smaller chunks
+isolate failures faster when a bad chunk needs to fall back to row-by-row.}
 }
 \value{
-A character vector of the cleaned and preprocessed text.
+A character vector of cleaned text, same length as \code{doc_vector}.
+  Rows that could not be processed are set to \code{NA_character_}. Details
+  on any failures are attached as \code{attr(result, "quarantine")}, a
+  data.frame with \code{row_index}, \code{original_text} (truncated to 200
+  chars), and \code{error_message}.
 }
 \description{
-This function provides a comprehensive and configurable pipeline for cleaning
-raw text data. It handles a variety of common preprocessing steps including
-removing URLs and HTML, lowercasing, stopword removal, and lemmatization.
+This function cleans raw text data using the same fast, vectorized string
+and tokenization operations as before, but runs them in chunks. If a chunk
+processes cleanly (the common case), it stays fully vectorized and fast.
+If a chunk throws an error (e.g. from a malformed row), only THAT chunk
+falls back to row-by-row processing so the exact offending row(s) can be
+isolated, quarantined, and set to NA -- without slowing down or risking
+the rest of the dataset.
 }
 \examples{
 raw_text <- c(
   "This is a <b>test</b>! Visit https://example.com",
   "Email me at test.user@example.org [important]"
 )
-
-# Basic preprocessing with defaults
 clean_text <- pre_process(raw_text)
 print(clean_text)
 
-# Keep punctuation and stopwords
-clean_text_no_stop <- pre_process(
-  raw_text,
-  remove_stop_words = FALSE,
-  remove_punct = FALSE
-)
-print(clean_text_no_stop)
+# Check for any quarantined rows after a run
+attr(clean_text, "quarantine")
 }
